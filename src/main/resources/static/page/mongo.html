@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="/common/element/index.css">
+    <script src="/common/vue/vue.js"></script>
+    <script src="/common/vue/vue-resource.js"></script>
+    <script src="/common/element/index.js"></script>
+    <style>
+        .el-table td, .el-table th {
+            text-align: center;
+        }
+
+        .el-table th {
+            background-color: #f5f7fa;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row>
+        <el-alert title="数据库" type="success"></el-alert>
+    </el-row>
+    <el-row style="margin-top: 5px;">
+        <el-form :inline="true">
+            <el-form-item label="过滤">
+                <el-input v-model="filterValue" size="small"></el-input>
+            </el-form-item>
+            <el-form-item label="类型">
+                <el-select v-model="dbType" placeholder="请选择" size="small">
+                    <el-option v-for="item in dbTypeOptions" :label="item.label" :value="item.value"
+                               size="small">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="loadData(1)" size="small">查询</el-button>
+                <el-button type="success" @click="addDatabase" size="small">新增</el-button>
+            </el-form-item>
+        </el-form>
+    </el-row>
+    <el-row>
+        <el-table :data="tableData" border>
+            <el-table-column label="IP" prop="ip" label="IP" width="150"></el-table-column>
+            <el-table-column label="端口" prop="port" width="100"></el-table-column>
+            <el-table-column label="数据库类型" label="数据库类型" width="150">
+                <template slot-scope="scope">{{getDbTypeName(scope.row.dbType)}}</template>
+            </el-table-column>
+            <el-table-column label="数据库名称" prop="dbName" width="150"></el-table-column>
+            <el-table-column label="数据库描述" prop="dbDesc"></el-table-column>
+            <el-table-column label="状态" width="80">
+                <template slot-scope="scope">{{scope.row.used == '1' ? '启用' : '未启用'}}</template>
+            </el-table-column>
+            <el-table-column label="操作" label="数据库类型" width="150">
+                <template slot-scope="scope">
+                    <el-button type="success" @click="editDatabase(scope.row.id)" size="small">编辑</el-button>
+                    <el-button type="danger" @click="deleteDatabase(scope.row)" size="small">删除</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+    </el-row>
+    <el-row>
+        <el-pagination
+                style="text-align: right"
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
+                :current-page="currentPage"
+                :page-sizes="[10, 20, 50, 100]"
+                :page-size="pageSize"
+                layout="total, sizes, prev, pager, next"
+                :total="total">
+        </el-pagination>
+    </el-row>
+
+    <el-dialog :title="addFormTitle" :visible.sync="isShowAddForm" width="500px">
+        <el-form :model="addForm" label-width="100px">
+            <el-form-item label="IP">
+                <el-input v-model="addForm.ip" size="small" placeholder="请输入IP"></el-input>
+            </el-form-item>
+            <el-form-item label="端口">
+                <el-input v-model="addForm.port" size="small" placeholder="请输入端口"></el-input>
+            </el-form-item>
+            <el-form-item label="数据库类型">
+                <el-select v-model="addForm.dbType" placeholder="请选择数据库类型" style="width: 100%" size="small">
+                    <el-option v-for="item in dbTypeOptions" :label="item.label" :value="item.value"
+                               size="small">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="数据库名称">
+                <el-input v-model="addForm.dbName" size="small" placeholder="请输入数据库名称"></el-input>
+            </el-form-item>
+            <el-form-item label="启用">
+                <el-switch v-model="addForm.used" active-color="#13ce66" inactive-color="gray">
+                </el-switch>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="isShowAddForm = false">取 消</el-button>
+            <el-button type="primary" @click="saveDatabase">保 存</el-button>
+        </div>
+    </el-dialog>
+
+    <el-dialog title="删除" :visible.sync="isShowDeleteConfirm" width="30%">
+        <span>{{deleteMsg}}</span>
+        <span slot="footer" class="dialog-footer">
+        <el-button @click="isShowDeleteConfirm = false">取 消</el-button>
+        <el-button type="primary" @click="confirmDatabase">确 定</el-button>
+        </span>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            filterValue: '',
+            dbType: '',
+            pageSize: 10,
+            currentPage: 1,
+            total: 0,
+            tableData: [],
+
+            dbTypeOptions: [
+                {
+                    label: '全部',
+                    value: '',
+                },
+                {
+                    label: 'mongo库',
+                    value: '1',
+                }
+            ],
+
+            isShowAddForm: false,
+            formInputWidth: '120px',
+            addFormTitle: '',
+            addForm: {
+                id: '',
+                ip: '',
+                port: '',
+                dbType: '',
+                dbName: '',
+                used: false
+            },
+
+            isShowDeleteConfirm: false,
+            deleteId: '',
+            deleteMsg:''
+        },
+        created: function () {
+            this.loadData();
+        },
+        methods: {
+            loadData: function (currentPage) {
+                if (currentPage) {
+                    this.currentPage = currentPage;
+                }
+                this.$http.get('/database/getPage', {
+                    params: {
+                        dbDesc: this.filterValue,
+                        dbType: this.dbType,
+                        pageSize: this.pageSize,
+                        currentPage: this.currentPage
+                    }
+                }).then(function (res) {
+                    var data = res.body;
+                    if (data) {
+                        this.total = data.total;
+                        this.tableData = data.list;
+                    } else {
+                        this.total = [];
+                        this.tableData = [];
+                    }
+                }).catch(function (res) {
+                    console.log(res);
+                });
+            },
+            getDbTypeName: function (dbType) {
+                for (var i = 0; i < this.dbTypeOptions.length; i++) {
+                    if (this.dbTypeOptions[i].value === dbType) {
+                        return this.dbTypeOptions[i].label;
+                    }
+                }
+                return '';
+            },
+            handleSizeChange: function (pageSize) {
+                this.pageSize = pageSize;
+                this.loadData();
+            },
+            handleCurrentChange: function (currentPage) {
+                this.currentPage = currentPage;
+                this.loadData();
+            },
+            addDatabase: function () {
+                this.resetAddForm();
+                this.addFormTitle = '新增数据库';
+                this.isShowAddForm = true;
+            },
+            editDatabase: function (id) {
+                this.resetAddForm();
+                this.isShowAddForm = true;
+                this.addFormTitle = '编辑数据库';
+                this.$http.get('/database/getOne', {
+                    params: {
+                        id: id
+                    }
+                }).then(function (res) {
+                    var data = res.body;
+                    if (data) {
+                        this.addForm = {
+                            id: data.id,
+                            ip: data.ip,
+                            port: data.port,
+                            dbType: data.dbType,
+                            dbName: data.dbName,
+                            used: data.used === '1'
+                        }
+                    }
+                }).catch(function (res) {
+                    console.log(res);
+                });
+            },
+            saveDatabase: function () {
+                if (!this.addForm.ip) {
+                    this.$message.error('请输入IP');
+                    return;
+                }
+                if (!this.addForm.port) {
+                    this.$message.error('请输入端口');
+                    return;
+                }
+                if (!this.addForm.dbType) {
+                    this.$message.error('请选择数据库类型');
+                    return;
+                }
+                if (!this.addForm.dbName) {
+                    this.$message.error('数据库名称');
+                    return;
+                }
+                this.$http.post('/database/saveDatabase', {
+                    id: this.addForm.id,
+                    ip: this.addForm.ip,
+                    port: this.addForm.port,
+                    dbType: this.addForm.dbType,
+                    dbName: this.addForm.dbName,
+                    used: this.addForm.used ? '1' : '0',
+                }, {
+                    emulateJSON: true
+                }).then(function (res) {
+                    var data = res.body;
+                    if (data.code === 0) {
+                        app.$message.success('保存成功');
+                        this.loadData();
+                        this.isShowAddForm = false;
+                    } else {
+                        app.$message.success(data.msg);
+                    }
+                }).catch(function (res) {
+                    console.log(res);
+                    app.$message.error('保存失败');
+                });
+            },
+            resetAddForm: function () {
+                this.addForm = {
+                    id: '',
+                    ip: '',
+                    port: '',
+                    dbType: '',
+                    dbName: '',
+                    used: false
+                }
+            },
+            deleteDatabase: function (row) {
+                this.isShowDeleteConfirm = true;
+                this.deleteId = row.id;
+                this.deleteMsg = '确认删除数据库【' + row.dbDesc + '】？';
+            },
+            confirmDatabase: function () {
+                if (!this.deleteId) {
+                    app.$message.error('请选择要删除的数据库');
+                    return;
+                }
+                this.$http.post('/database/deleteDatabase', {
+                    id: this.deleteId
+                }, {
+                    emulateJSON: true
+                }).then(function (res) {
+                    var data = res.body;
+                    if (data.code === 0) {
+                        app.$message.success('删除成功');
+                        this.loadData();
+                        this.isShowDeleteConfirm = false;
+                    } else {
+                        app.$message.success(data.msg);
+                    }
+                }).catch(function (res) {
+                    console.log(res);
+                    app.$message.error('删除失败');
+                });
+            }
+        }
+    })
+</script>
+</html>
