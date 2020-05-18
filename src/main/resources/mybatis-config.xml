@@ -4,6 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-config.dtd">
 <configuration>
     <typeAliases>
-    <typeAlias alias="database" type="com.lbeen.spring.database.bean.Database"/>
+        <typeAlias alias="database" type="com.lbeen.spring.database.bean.Database"/>
+        <typeAlias alias="table" type="com.lbeen.spring.database.bean.Table"/>
     </typeAliases>
 </configuration>

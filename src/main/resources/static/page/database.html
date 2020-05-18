@@ -7,41 +7,33 @@
     <script src="/common/vue/vue.js"></script>
     <script src="/common/vue/vue-resource.js"></script>
     <script src="/common/element/index.js"></script>
-    <style>
-        .el-table td, .el-table th {
-            text-align: center;
-        }
-
-        .el-table th {
-            background-color: #f5f7fa;
-        }
-    </style>
+    <script src="/common/vue/vueComponent.js"></script>
 </head>
 <body>
 <div id="app">
     <el-row>
         <el-alert title="数据库" type="success"></el-alert>
     </el-row>
-    <el-row style="margin-top: 5px;">
-        <el-form :inline="true">
-            <el-form-item label="过滤">
-                <el-input v-model="filterValue" size="small"></el-input>
-            </el-form-item>
-            <el-form-item label="类型">
-                <el-select v-model="dbType" placeholder="请选择" size="small">
-                    <el-option v-for="item in dbTypeOptions" :label="item.label" :value="item.value"
-                               size="small">
-                    </el-option>
-                </el-select>
-            </el-form-item>
-            <el-form-item>
-                <el-button type="primary" @click="loadData(1)" size="small">查询</el-button>
-                <el-button type="success" @click="addDatabase" size="small">新增</el-button>
-            </el-form-item>
-        </el-form>
-    </el-row>
-    <el-row>
-        <el-table :data="tableData" border>
+    <page-table url="/database/getDbPage" :param="param">
+        <slot slot="search" slot-scope="scope">
+            <el-form :inline="true">
+                <el-form-item label="过滤">
+                    <el-input v-model="param.dbDesc" size="small"></el-input>
+                </el-form-item>
+                <el-form-item label="类型">
+                    <el-select v-model="param.dbType" placeholder="请选择数据库类型" size="small" clearable>
+                        <el-option v-for="item in dbTypeOptions" :label="item.label" :value="item.value"
+                                   size="small">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="scope.loadData(1)" size="small">查询</el-button>
+                    <el-button type="success" @click="addDatabase" size="small">新增</el-button>
+                </el-form-item>
+            </el-form>
+        </slot>
+        <slot slot="table">
             <el-table-column label="IP" prop="ip" label="IP" width="150"></el-table-column>
             <el-table-column label="端口" prop="port" width="100"></el-table-column>
             <el-table-column label="数据库类型" label="数据库类型" width="150">
@@ -58,20 +50,8 @@
                     <el-button type="danger" @click="deleteDatabase(scope.row)" size="small">删除</el-button>
                 </template>
             </el-table-column>
-        </el-table>
-    </el-row>
-    <el-row>
-        <el-pagination
-                style="text-align: right"
-                @size-change="handleSizeChange"
-                @current-change="handleCurrentChange"
-                :current-page="currentPage"
-                :page-sizes="[10, 20, 50, 100]"
-                :page-size="pageSize"
-                layout="total, sizes, prev, pager, next"
-                :total="total">
-        </el-pagination>
-    </el-row>
+        </slot>
+    </page-table>
 
     <el-dialog :title="addFormTitle" :visible.sync="isShowAddForm" width="500px">
         <el-form :model="addForm" label-width="100px">
@@ -82,7 +62,7 @@
                 <el-input v-model="addForm.port" size="small" placeholder="请输入端口"></el-input>
             </el-form-item>
             <el-form-item label="数据库类型">
-                <el-select v-model="addForm.dbType" placeholder="请选择数据库类型" style="width: 100%" size="small">
+                <el-select v-model="addForm.dbType" placeholder="请选择数据库类型" style="width: 100%" size="small" clearable>
                     <el-option v-for="item in dbTypeOptions" :label="item.label" :value="item.value"
                                size="small">
                     </el-option>
@@ -115,18 +95,11 @@
     var app = new Vue({
         el: '#app',
         data: {
-            filterValue: '',
-            dbType: '',
-            pageSize: 10,
-            currentPage: 1,
-            total: 0,
-            tableData: [],
-
+            param: {
+                dbDesc: '',
+                dbType: '',
+            },
             dbTypeOptions: [
-                {
-                    label: '全部',
-                    value: '',
-                },
                 {
                     label: 'mongo库',
                     value: '1',
@@ -147,36 +120,9 @@
 
             isShowDeleteConfirm: false,
             deleteId: '',
-            deleteMsg:''
-        },
-        created: function () {
-            this.loadData();
+            deleteMsg: ''
         },
         methods: {
-            loadData: function (currentPage) {
-                if (currentPage) {
-                    this.currentPage = currentPage;
-                }
-                this.$http.get('/database/getPage', {
-                    params: {
-                        dbDesc: this.filterValue,
-                        dbType: this.dbType,
-                        pageSize: this.pageSize,
-                        currentPage: this.currentPage
-                    }
-                }).then(function (res) {
-                    var data = res.body;
-                    if (data) {
-                        this.total = data.total;
-                        this.tableData = data.list;
-                    } else {
-                        this.total = [];
-                        this.tableData = [];
-                    }
-                }).catch(function (res) {
-                    console.log(res);
-                });
-            },
             getDbTypeName: function (dbType) {
                 for (var i = 0; i < this.dbTypeOptions.length; i++) {
                     if (this.dbTypeOptions[i].value === dbType) {
@@ -184,14 +130,6 @@
                     }
                 }
                 return '';
-            },
-            handleSizeChange: function (pageSize) {
-                this.pageSize = pageSize;
-                this.loadData();
-            },
-            handleCurrentChange: function (currentPage) {
-                this.currentPage = currentPage;
-                this.loadData();
             },
             addDatabase: function () {
                 this.resetAddForm();
@@ -202,7 +140,7 @@
                 this.resetAddForm();
                 this.isShowAddForm = true;
                 this.addFormTitle = '编辑数据库';
-                this.$http.get('/database/getOne', {
+                this.$http.get('/database/getOneDb', {
                     params: {
                         id: id
                     }

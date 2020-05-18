@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lbeen.spring.database.mapper.TableMapper">
+    <sql id="where">
+        <if test="dbId != null">
+            and dbId = #{dbId}
+        </if>
+        <if test="tableName != null">
+            and tableName = #{tableName}
+        </if>
+        <if test="tableDesc != null">
+            and tableDesc like '%${tableDesc}%'
+        </if>
+    </sql>
+
+    <select id="count" resultType="Integer" parameterType="map">
+        select count(1) from t_table t join t_database d on t.dbId=d.id
+        <where>
+            <include refid="where"/>
+        </where>
+    </select>
+
+    <select id="selectPage" resultType="map" parameterType="map">
+        select t.*,d.dbDesc from t_table t join t_database d on t.dbId=d.id
+        <where>
+            <include refid="where"/>
+        </where>
+        limit #{skip},#{limit}
+    </select>
+
+    <select id="selectOne" resultType="table" parameterType="String">
+        select * from t_table where id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="database">
+        insert into t_table
+        (id,dbId,tableName,tableDesc)
+        values
+        (#{id},#{dbId},#{tableName},#{tableDesc})
+    </insert>
+
+    <update id="update" parameterType="table">
+        update t_table
+        <set>
+            <if test="dbId != null">
+                dbId=#{dbId},
+            </if>
+            <if test="tableName != null">
+                tableName=#{tableName},
+            </if>
+            <if test="tableDesc != null">
+                tableDesc=#{tableDesc},
+            </if>
+        </set>
+        where id=#{id}
+    </update>
+
+    <delete id="delete" parameterType="String">
+        delete from t_table where id = #{id}
+    </delete>
+</mapper>

@@ -1,21 +1,27 @@
 package com.lbeen.spring.database.mapper;
 
 import com.lbeen.spring.database.bean.Database;
+import com.lbeen.spring.database.bean.Table;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface DatabaseMapper {
-    int count(Database database);
+    int count(Map<String, Object> param);
 
-    List<Database> selectPage(Database database);
+    List<Database> selectPage(Map<String, Object> param);
 
     Database selectOne(String id);
 
-    void insertDatabase(Database database);
+    void insert(Database database);
 
-    void updateDatabase(Database database);
+    void update(Database database);
 
-    void deleteDatabase(String id);
+    void delete(String id);
+
+    List<Database> getUsedMongoDbs();
+
+    List<Table> getUsedMongoTables();
 }

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="/common/element/index.css">
+    <script src="/common/vue/vue.js"></script>
+    <script src="/common/vue/vue-resource.js"></script>
+    <script src="/common/element/index.js"></script>
+    <script src="/common/vue/vueComponent.js"></script>
+    <script src="/common/jquery3.5.1.js"></script>
+</head>
+<body>
+<div id="app">
+    <el-row>
+        <el-alert title="数据表" type="success"></el-alert>
+    </el-row>
+    <page-table url="/database/getTablePage" :param="param">
+        <slot slot="search" slot-scope="scope">
+            <el-form :inline="true">
+                <el-form-item label="表名">
+                    <el-input v-model="param.tableName" size="small" clearable></el-input>
+                </el-form-item>
+                <el-form-item label="表描述">
+                    <el-input v-model="param.tableDesc" size="small" clearable></el-input>
+                </el-form-item>
+                <el-form-item label="类型">
+                    <el-select v-model="param.dbId" placeholder="请选择数据库" size="small" clearable>
+                        <el-option v-for="item in dbOptions" :label="item.label" :value="item.value"
+                                   size="small">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item>
+                    <el-button id="search" type="primary" @click="scope.loadData(1)" size="small">查询</el-button>
+                    <el-button type="success" @click="addTable" size="small">新增</el-button>
+                </el-form-item>
+            </el-form>
+        </slot>
+        <slot slot="table">
+            <el-table-column label="表名" prop="tableName" label="IP" width="150"></el-table-column>
+            <el-table-column label="表描述" prop="tableDesc" width="100"></el-table-column>
+            <el-table-column label="数据库" prop="dbDesc"></el-table-column>
+            <el-table-column label="操作">
+                <template slot-scope="scope">
+                    <el-button type="success" @click="editTable(scope.row.id)" size="small">编辑</el-button>
+                    <el-button type="danger" @click="deleteTable(scope.row)" size="small">删除</el-button>
+                </template>
+            </el-table-column>
+        </slot>
+    </page-table>
+
+    <el-dialog :title="addFormTitle" :visible.sync="isShowAddForm" width="500px">
+        <el-form :model="addForm" label-width="100px">
+            <el-form-item label="表名">
+                <el-input v-model="addForm.tableName" size="small" placeholder="请输入表名"></el-input>
+            </el-form-item>
+            <el-form-item label="表描述">
+                <el-input v-model="addForm.tableDesc" size="small" placeholder="请输入表描述"></el-input>
+            </el-form-item>
+            <el-form-item label="数据库">
+                <el-select v-model="addForm.dbId" placeholder="请选择数据库" style="width: 100%" size="small" clearable>
+                    <el-option v-for="item in dbOptions" :label="item.label" :value="item.value"
+                               size="small">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="isShowAddForm = false">取 消</el-button>
+            <el-button type="primary" @click="saveTable">保 存</el-button>
+        </div>
+    </el-dialog>
+
+    <el-dialog title="删除" :visible.sync="isShowDeleteConfirm" width="30%">
+        <span>{{deleteMsg}}</span>
+        <span slot="footer" class="dialog-footer">
+        <el-button @click="isShowDeleteConfirm = false">取 消</el-button>
+        <el-button type="primary" @click="confirmTable">确 定</el-button>
+        </span>
+    </el-dialog>
+</div>
+</body>
+<script>
+    const app = new Vue({
+        el: '#app',
+        data: {
+            param: {
+                dbId: '',
+                tableName: '',
+                tableDesc: '',
+            },
+            dbOptions: [],
+
+            isShowAddForm: false,
+            formInputWidth: '120px',
+            addFormTitle: '',
+            addForm: {
+                id: '',
+                tableName: '',
+                tableDesc: '',
+                dbId: ''
+            },
+
+            isShowDeleteConfirm: false,
+            deleteId: '',
+            deleteMsg: ''
+        },
+        created: function () {
+            this.getDbs();
+        },
+        methods: {
+            getDbs: function () {
+                const param = {
+                    pageSize: 100,
+                    currentPage: 1
+                };
+                this.$http.get('/database/getDbPage', {
+                    params: param
+                }).then(function (res) {
+                    let data = res.body;
+                    if (data) {
+                        for (let i = 0; i < data.list.length; i++) {
+                            this.dbOptions.push({
+                                label: data.list[i].dbDesc,
+                                value: data.list[i].id,
+                            });
+                        }
+                    } else {
+                        console.log(res);
+                    }
+                }).catch(function (res) {
+                    console.log(res);
+                });
+            },
+            addTable: function () {
+                this.resetAddForm();
+                this.addFormTitle = '新增表';
+                this.isShowAddForm = true;
+            },
+            editTable: function (id) {
+                this.resetAddForm();
+                this.isShowAddForm = true;
+                this.addFormTitle = '编辑表';
+                this.$http.get('/database/getOneTable', {
+                    params: {
+                        id: id
+                    }
+                }).then(function (res) {
+                    var data = res.body;
+                    if (data) {
+                        this.addForm = {
+                            id: data.id,
+                            tableName: data.tableName,
+                            tableDesc: data.tableDesc,
+                            dbId: data.dbId
+                        }
+                    }
+                }).catch(function (res) {
+                    console.log(res);
+                });
+            },
+            saveTable: function () {
+                if (!this.addForm.tableName) {
+                    this.$message.error('请输入表名');
+                    return;
+                }
+                if (!this.addForm.tableDesc) {
+                    this.$message.error('请输入表描述');
+                    return;
+                }
+                if (!this.addForm.dbId) {
+                    this.$message.error('请选择数据库');
+                    return;
+                }
+                this.$http.post('/database/saveTable', {
+                    id: this.addForm.id,
+                    tableName: this.addForm.tableName,
+                    tableDesc: this.addForm.tableDesc,
+                    dbId: this.addForm.dbId
+                }, {
+                    emulateJSON: true
+                }).then(function (res) {
+                    var data = res.body;
+                    if (data.code === 0) {
+                        app.$message.success('保存成功');
+                        $('#search').click();
+                        this.isShowAddForm = false;
+                    } else {
+                        app.$message.success(data.msg);
+                    }
+                }).catch(function (res) {
+                    console.log(res);
+                    app.$message.error('保存失败');
+                });
+            },
+            resetAddForm: function () {
+                this.addForm = {
+                    id: '',
+                    ip: '',
+                    port: '',
+                    dbType: '',
+                    dbName: '',
+                    used: false
+                }
+            },
+            deleteTable: function (row) {
+                this.isShowDeleteConfirm = true;
+                this.deleteId = row.id;
+                this.deleteMsg = '确认删除表【' + row.tableName + '】？';
+            },
+            confirmTable: function () {
+                if (!this.deleteId) {
+                    app.$message.error('请选择要删除的表');
+                    return;
+                }
+                this.$http.post('/database/deleteTable', {
+                    id: this.deleteId
+                }, {
+                    emulateJSON: true
+                }).then(function (res) {
+                    var data = res.body;
+                    if (data.code === 0) {
+                        app.$message.success('删除成功');
+                        $('#search').click();
+                        this.isShowDeleteConfirm = false;
+                    } else {
+                        app.$message.success(data.msg);
+                    }
+                }).catch(function (res) {
+                    console.log(res);
+                    app.$message.error('删除失败');
+                });
+            }
+        }
+    })
+</script>
+</html>

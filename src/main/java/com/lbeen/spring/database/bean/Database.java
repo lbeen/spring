@@ -1,8 +1,6 @@
 package com.lbeen.spring.database.bean;
 
-import com.lbeen.spring.common.page.PageBean;
-
-public class Database extends PageBean {
+public class Database {
     private String id;
     private String ip;
     private String port;

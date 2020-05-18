@@ -1,28 +1,41 @@
 package com.lbeen.spring.database.service.impl;
 
-import com.lbeen.spring.common.page.Page;
-import com.lbeen.spring.common.page.PageUtil;
+import com.lbeen.spring.common.bean.Page;
+import com.lbeen.spring.common.util.MapUtil;
 import com.lbeen.spring.common.util.R;
+import com.lbeen.spring.common.util.SqlUtil;
 import com.lbeen.spring.database.bean.Database;
+import com.lbeen.spring.database.bean.Table;
 import com.lbeen.spring.database.mapper.DatabaseMapper;
+import com.lbeen.spring.database.mapper.TableMapper;
 import com.lbeen.spring.database.service.DatabaseService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class DatabaseServiceImpl implements DatabaseService {
     @Resource
     private DatabaseMapper databaseMapper;
 
+    @Resource
+    private TableMapper tableMapper;
+
     @Override
-    public Page getPage(Database database) {
-        return PageUtil.getPage(() -> databaseMapper.count(database), () -> databaseMapper.selectPage(database));
+    public Page getDbPage(Integer skip, Integer limit, String dbDesc, String dbType, String used) {
+        Map<String, Object> param = new HashMap<>();
+        MapUtil.putIfNotBlank(param, "dbDesc", dbDesc);
+        MapUtil.putIfNotBlank(param, "dbType", dbType);
+        MapUtil.putIfNotBlank(param, "used", used);
+        return SqlUtil.queryPage(databaseMapper::count, databaseMapper::selectPage, param, skip, limit);
     }
 
     @Override
-    public Database getOne(String id) {
+    public Database getOneDb(String id) {
         return databaseMapper.selectOne(id);
     }
 
@@ -31,14 +44,54 @@ public class DatabaseServiceImpl implements DatabaseService {
         database.setDbDesc(database.getIp() + "_" + database.getPort() + "_" + database.getDbName());
         if (StringUtils.isBlank(database.getId())) {
             database.setId(R.uuid());
-            databaseMapper.insertDatabase(database);
+            databaseMapper.insert(database);
         } else {
-            databaseMapper.updateDatabase(database);
+            databaseMapper.update(database);
         }
     }
 
     @Override
-    public void deleteDatabase(String id){
-        databaseMapper.deleteDatabase(id);
+    public void deleteDatabase(String id) {
+        databaseMapper.delete(id);
+    }
+
+    @Override
+    public Page getTablePage(Integer skip, Integer limit, String dbId, String tableName, String tableDesc) {
+        Map<String, Object> param = new HashMap<>();
+        MapUtil.putIfNotBlank(param, "dbId", dbId);
+        MapUtil.putIfNotBlank(param, "tableName", tableName);
+        MapUtil.putIfNotBlank(param, "tableDesc", tableDesc);
+        return SqlUtil.queryPage(tableMapper::count, tableMapper::selectPage, param, skip, limit);
+    }
+
+    @Override
+    public Table getOneTable(String id) {
+        return tableMapper.selectOne(id);
+    }
+
+    @Override
+    public void saveTable(Table table) {
+        if (StringUtils.isBlank(table.getId())) {
+            table.setId(R.uuid());
+            tableMapper.insert(table);
+        } else {
+            tableMapper.update(table);
+        }
+    }
+
+    @Override
+    public void deleteTable(String id) {
+        tableMapper.delete(id);
+    }
+
+
+    @Override
+    public List<Database> getUsedMongoDbs() {
+        return databaseMapper.getUsedMongoDbs();
+    }
+
+    @Override
+    public List<Table> getUsedMongoTables() {
+        return databaseMapper.getUsedMongoTables();
     }
 }
