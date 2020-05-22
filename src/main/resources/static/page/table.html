@@ -34,17 +34,19 @@
                 <el-form-item>
                     <el-button id="search" type="primary" @click="scope.loadData(1)" size="small">查询</el-button>
                     <el-button type="success" @click="addTable" size="small">新增</el-button>
+                    <el-button type="success" @click="refreshTableCatch" size="small">刷新缓存</el-button>
                 </el-form-item>
             </el-form>
         </slot>
         <slot slot="table">
             <el-table-column label="表名" prop="tableName" label="IP" width="150"></el-table-column>
-            <el-table-column label="表描述" prop="tableDesc" width="100"></el-table-column>
-            <el-table-column label="数据库" prop="dbDesc"></el-table-column>
+            <el-table-column label="表描述" prop="tableDesc"></el-table-column>
+            <el-table-column label="数据库" prop="dbDesc" width="220"></el-table-column>
             <el-table-column label="操作">
                 <template slot-scope="scope">
                     <el-button type="success" @click="editTable(scope.row.id)" size="small">编辑</el-button>
                     <el-button type="danger" @click="deleteTable(scope.row)" size="small">删除</el-button>
+                    <el-button type="primary" @click="editColumns(scope.row.id)" size="small">编辑字段</el-button>
                 </template>
             </el-table-column>
         </slot>
@@ -79,6 +81,36 @@
         <el-button type="primary" @click="confirmTable">确 定</el-button>
         </span>
     </el-dialog>
+
+    <el-dialog title="字段说明" :visible.sync="showColumnsTable">
+        <el-table :data="tableColumns" border max-height="500" :cell-style="{'text-align': 'center'}"
+                  :header-cell-style="{'text-align': 'center','background-color': '#f5f7fa'}">
+            <el-table-column label="序号" prop="column" width="50">
+                <template slot-scope="scope">{{scope.$index + 1}}</template>
+            </el-table-column>
+            <el-table-column label="字段" prop="column" width="150">
+                <template slot-scope="scope">
+                    <el-input v-model="scope.row.column" size="small" placeholder="请输入字段名"></el-input>
+                </template>
+            </el-table-column>
+            <el-table-column label="描述">
+                <template slot-scope="scope">
+                    <el-input v-model="scope.row.desc" size="small" placeholder="请输入字段描述"></el-input>
+                </template>
+            </el-table-column>
+            <el-table-column label="删除" width="50">
+                <template slot-scope="scope">
+                    <i class="el-icon-delete" style="color: red;cursor: pointer;"
+                       @click="deleteColumn(scope.$index)"></i>
+                </template>
+            </el-table-column>
+        </el-table>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="showColumnsTable = false" size="small">取 消</el-button>
+            <el-button type="success" @click="addTableColumn" size="small">新增</el-button>
+            <el-button type="primary" @click="saveTableColumns" size="small">保 存</el-button>
+        </div>
+    </el-dialog>
 </div>
 </body>
 <script>
@@ -104,7 +136,11 @@
 
             isShowDeleteConfirm: false,
             deleteId: '',
-            deleteMsg: ''
+            deleteMsg: '',
+
+            showColumnsTable: false,
+            currentTableId: '',
+            tableColumns: []
         },
         created: function () {
             this.getDbs();
@@ -224,6 +260,83 @@
                         app.$message.success('删除成功');
                         $('#search').click();
                         this.isShowDeleteConfirm = false;
+                    } else {
+                        app.$message.success(data.msg);
+                    }
+                }).catch(function (res) {
+                    console.log(res);
+                    app.$message.error('删除失败');
+                });
+            },
+            refreshTableCatch:function(){
+                this.$http.post('/database/refreshTableCatch').then(function (res) {
+                    var data = res.body;
+                    if (data.code === 0) {
+                        app.$message.success('刷新成功');
+                    } else {
+                        app.$message.error(data.msg);
+                    }
+                }).catch(function (res) {
+                    console.log(res);
+                    app.$message.error('刷新失败');
+                });
+            },
+            editColumns: function (tableId) {
+                this.currentTableId = tableId;
+                this.tableColumns = [];
+                this.showColumnsTable = true;
+                var self = this;
+                this.$http.get('/database/getTableColumns', {
+                    params: {tableId: tableId}
+                }).then(function (res) {
+                    let data = res.body;
+                    if (data && data.length > 0) {
+                        self.tableColumns = data;
+                    }
+                }).catch(function (res) {
+                    console.log(res);
+                });
+            },
+            addTableColumn: function () {
+                this.tableColumns.push({});
+            },
+            deleteColumn: function (columnIndex) {
+                var tableColumns = [];
+                for (var i = 0; i < this.tableColumns.length; i++) {
+                    if (i !== columnIndex) {
+                        tableColumns.push(this.tableColumns[i]);
+                    }
+                }
+                this.tableColumns = tableColumns;
+            },
+            saveTableColumns:function () {
+                var tableColumns = [];
+                for (var i = 0; i < this.tableColumns.length; i++) {
+                    var tableColumn = this.tableColumns[i];
+                    if (!tableColumn.column || !tableColumn.desc) {
+                        this.$message.error('请完善字段信息');
+                        return;
+                    }
+                    tableColumns.push({
+                        column:tableColumn.column,
+                        desc:tableColumn.desc,
+                    });
+                }
+                if (tableColumns.length === 0) {
+                    this.$message.error('请添加字段信息');
+                    return;
+                }
+
+                this.$http.post('/database/saveTableColumns', {
+                    tableId: this.currentTableId,
+                    tableColumns: this.tableColumns,
+                // }, {
+                //     emulateJSON: true
+                }).then(function (res) {
+                    var data = res.body;
+                    if (data.code === 0) {
+                        app.$message.success('保存成功');
+                        this.showColumnsTable = false;
                     } else {
                         app.$message.success(data.msg);
                     }

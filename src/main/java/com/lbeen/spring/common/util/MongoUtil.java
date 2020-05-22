@@ -24,10 +24,10 @@ public class MongoUtil {
     private static Map<String, String> TABLES = new HashMap<>();
 
     static {
-        init();
+        loadCache();
     }
 
-    private static void init() {
+    public static void loadCache() {
         System.out.println("===============MongoDBUtil初始化========================");
         DatabaseService databaseService = SpringUtil.getBean("databaseServiceImpl");
 
@@ -41,7 +41,7 @@ public class MongoUtil {
             options.maxWaitTime(5000); //
             options.socketTimeout(0);// 套接字超时时间，0无限制
             options.threadsAllowedToBlockForConnectionMultiplier(5000);// 线程队列数，如果连接线程排满了队列就会抛出“Out of semaphores to get db”错误。
-            options.writeConcern(WriteConcern.JOURNALED);//
+//            options.writeConcern(WriteConcern.JOURNALED);//
 
             Map<String, MongoClient> mongoClients = new HashMap<>();
             for (Database database : databases) {
@@ -50,6 +50,7 @@ public class MongoUtil {
                 if (client == null) {
                     ServerAddress serverAddress = new ServerAddress(database.getIp(), Integer.parseInt(database.getPort()));
                     client = new MongoClient(serverAddress, options.build());
+                    mongoClients.put(key, client);
                 }
                 clients.put(database.getId(), new MyMongoClient(client, database.getDbName()));
             }
@@ -68,23 +69,19 @@ public class MongoUtil {
     }
 
     private static MongoCollection<Document> getMongoCollection(String collectionName) {
-        String dbId = TABLES.get(collectionName);
-        if (dbId == null) {
-            return null;
-        }
-        MyMongoClient client = CLIENTS.get(dbId);
-        if (client == null) {
-            return null;
-        }
-        return client.getCollection(collectionName);
+        return CLIENTS.get(TABLES.get(collectionName)).getCollection(collectionName);
     }
 
     public static Long count(String collectionName, Bson filter) {
-        MongoCollection<Document> collection = getMongoCollection(collectionName);
-        if (collection == null) {
-            return 0L;
+        return  getMongoCollection(collectionName).countDocuments(filter);
+    }
+
+    public static Document findOne(String collectionName, Bson filter) {
+        FindIterable<Document> iterable =  getMongoCollection(collectionName).find(filter);
+        for (Document document : iterable) {
+            return document;
         }
-        return collection.countDocuments(filter);
+        return null;
     }
 
     public static List<Document> find(String collectionName, Bson filter) {
@@ -94,11 +91,7 @@ public class MongoUtil {
     public static List<Document> find(String collectionName, Bson filter, Integer skip, Integer limit) {
         ArrayList<Document> result = new ArrayList<>();
 
-        MongoCollection<Document> collection = getMongoCollection(collectionName);
-        if (collection == null) {
-            return result;
-        }
-        FindIterable<Document> iterable = collection.find(filter);
+        FindIterable<Document> iterable =  getMongoCollection(collectionName).find(filter);
         if (skip != null) {
             iterable.skip(skip);
         }
@@ -111,5 +104,15 @@ public class MongoUtil {
         return result;
     }
 
+    public static void delete(String collectionName, Bson filter) {
+        getMongoCollection(collectionName).deleteMany(filter);
+    }
 
+    public static void insert(String collectionName, Document document) {
+        getMongoCollection(collectionName).insertOne(document);
+    }
+
+    public static void insertList(String collectionName, List<Document> documents) {
+        getMongoCollection(collectionName).insertMany(documents);
+    }
 }

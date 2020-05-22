@@ -13,7 +13,15 @@ public class Result {
         return new Result(0, null, data);
     }
 
-    public Result(int code, String msg, Object data) {
+    public static Result error() {
+        return new Result(-1, "操作失败", null);
+    }
+
+    public static Result error(String msg) {
+        return new Result(-1, msg, null);
+    }
+
+    private Result(int code, String msg, Object data) {
         this.code = code;
         this.msg = msg;
         this.data = data;

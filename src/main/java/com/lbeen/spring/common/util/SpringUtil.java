@@ -2,7 +2,7 @@ package com.lbeen.spring.common.util;
 
 import org.springframework.context.ApplicationContext;
 
-public class SpringUtil{ //implements ApplicationContextAware {
+public class SpringUtil{
     private static ApplicationContext applicationContext;
 
 //    @Override

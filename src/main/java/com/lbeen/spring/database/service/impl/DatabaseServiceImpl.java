@@ -1,7 +1,7 @@
 package com.lbeen.spring.database.service.impl;
 
 import com.lbeen.spring.common.bean.Page;
-import com.lbeen.spring.common.util.MapUtil;
+import com.lbeen.spring.common.util.CommonUtil;
 import com.lbeen.spring.common.util.R;
 import com.lbeen.spring.common.util.SqlUtil;
 import com.lbeen.spring.database.bean.Database;
@@ -28,9 +28,9 @@ public class DatabaseServiceImpl implements DatabaseService {
     @Override
     public Page getDbPage(Integer skip, Integer limit, String dbDesc, String dbType, String used) {
         Map<String, Object> param = new HashMap<>();
-        MapUtil.putIfNotBlank(param, "dbDesc", dbDesc);
-        MapUtil.putIfNotBlank(param, "dbType", dbType);
-        MapUtil.putIfNotBlank(param, "used", used);
+        CommonUtil.putIfNotBlank(param, "dbDesc", dbDesc);
+        CommonUtil.putIfNotBlank(param, "dbType", dbType);
+        CommonUtil.putIfNotBlank(param, "used", used);
         return SqlUtil.queryPage(databaseMapper::count, databaseMapper::selectPage, param, skip, limit);
     }
 
@@ -58,9 +58,9 @@ public class DatabaseServiceImpl implements DatabaseService {
     @Override
     public Page getTablePage(Integer skip, Integer limit, String dbId, String tableName, String tableDesc) {
         Map<String, Object> param = new HashMap<>();
-        MapUtil.putIfNotBlank(param, "dbId", dbId);
-        MapUtil.putIfNotBlank(param, "tableName", tableName);
-        MapUtil.putIfNotBlank(param, "tableDesc", tableDesc);
+        CommonUtil.putIfNotBlank(param, "dbId", dbId);
+        CommonUtil.putIfNotBlank(param, "tableName", tableName);
+        CommonUtil.putIfNotBlank(param, "tableDesc", tableDesc);
         return SqlUtil.queryPage(tableMapper::count, tableMapper::selectPage, param, skip, limit);
     }
 
