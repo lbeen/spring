@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lbeen.spring.sys.mapper.DicMapper">
+    <insert id="insert" parameterType="dic">
+        insert into t_dic
+        (id,parentId,name,code,sort,used)
+        values
+        (#{id},#{parentId},#{name},#{code},#{sort},#{used})
+    </insert>
+
+    <update id="update" parameterType="dic">
+        update t_dic
+        <set>
+            <if test="name != null">
+                name=#{name},
+            </if>
+            <if test="code != null">
+                code=#{code},
+            </if>
+            <if test="sort != null">
+                sort=#{sort},
+            </if>
+            <if test="used != null">
+                used=#{used},
+            </if>
+        </set>
+        where id=#{id}
+    </update>
+
+    <select id="selectById" resultType="dic" parameterType="String">
+        select * from t_dic where id = #{id}
+    </select>
+
+    <select id="selectOne" resultType="dic" parameterType="dic">
+        select * from t_dic
+        <where>
+            and parentId = #{parentId}
+            <if test="code != null">
+                and code = #{code}
+            </if>
+        </where>
+        limit 1
+    </select>
+
+    <select id="selectAllUsedDic" resultType="dic">
+        select * from t_dic where used='1'
+    </select>
+
+    <select id="selectDicByParentId" resultType="dic" parameterType="String">
+        select * from t_dic
+        <where>
+            <choose>
+                <when test="_parameter == null || _parameter == ''">
+                    and parentId is null
+                </when>
+                <otherwise>
+                    and parentId = #{parentId}
+                </otherwise>
+            </choose>
+        </where>
+        order by sort
+    </select>
+</mapper>

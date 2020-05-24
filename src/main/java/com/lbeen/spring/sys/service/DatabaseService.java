@@ -1,8 +1,8 @@
-package com.lbeen.spring.database.service;
+package com.lbeen.spring.sys.service;
 
 import com.lbeen.spring.common.bean.Page;
-import com.lbeen.spring.database.bean.Database;
-import com.lbeen.spring.database.bean.Table;
+import com.lbeen.spring.sys.bean.Database;
+import com.lbeen.spring.sys.bean.Table;
 
 import java.util.List;
 
@@ -14,14 +14,6 @@ public interface DatabaseService {
     void saveDatabase(Database database);
 
     void deleteDatabase(String id);
-
-    Page getTablePage(Integer skip, Integer limit, String dbId, String tableName, String tableDesc);
-
-    Table getOneTable(String id);
-
-    void saveTable(Table table);
-
-    void deleteTable(String id);
 
     List<Database> getUsedMongoDbs();
 

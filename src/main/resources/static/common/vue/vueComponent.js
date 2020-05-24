@@ -36,14 +36,7 @@ Vue.component('pageTable', {
             myPageSize: 10,
             currentPage: 1,
             total: 0,
-            tableData: [],
-            cellStyle: {
-                'text-align': 'center'
-            },
-            headCellStyle: {
-                'text-align': 'center',
-                'background-color': '#f5f7fa'
-            }
+            tableData: []
         }
     },
     created: function () {
@@ -63,21 +56,15 @@ Vue.component('pageTable', {
             param.skip = this.pageSize * (this.currentPage - 1);
             param.limit = this.pageSize;
 
-
-            this.$http.get(this.url, {
-                params: param
-            }).then(function (res) {
-                let data = res.body;
+            let self = this;
+            this.httpGet(this.url, param, function (data) {
                 if (data) {
-                    this.total = data.total;
-                    this.tableData = data.list;
+                    self.total = data.total;
+                    self.tableData = data.list;
                 } else {
-                    this.total = [];
-                    this.tableData = [];
-                    console.log(res);
+                    self.total = [];
+                    self.tableData = [];
                 }
-            }).catch(function (res) {
-                console.log(res);
             });
         },
         handleSizeChange: function (pageSize) {
@@ -95,8 +82,7 @@ Vue.component('pageTable', {
         '       <slot name="search" :loadData="loadData"></slot>' +
         '   </el-row>' +
         '   <el-row>' +
-        '       <el-table :data="tableData" border :cell-style="cellStyle" :header-cell-style="headCellStyle"' +
-        '                 :max-height="tableMaxHeight">' +
+        '       <el-table :data="tableData" border :max-height="tableMaxHeight">' +
         '           <slot name="table"></slot>' +
         '       </el-table>' +
         '   </el-row>' +
@@ -113,4 +99,92 @@ Vue.component('pageTable', {
         '       </el-pagination>' +
         '   </el-row>' +
         '</div>'
+});
+
+Vue.component('dicSelect', {
+    props: {
+        value: {
+            type: String,
+            default: ''
+        },
+        dicType: {
+            type: String,
+            default: ''
+        },
+        placeholder: {
+            type: String,
+            default: ''
+        }
+    },
+    data: function () {
+        return {
+            selectValue: '',
+            items: []
+        }
+    },
+    created: function () {
+        this.getItems();
+    },
+    watch: {
+        value: function (newVal) {
+            this.selectValue = newVal;
+        },
+        selectValue: function (newVal) {
+            this.$emit('value', newVal)
+        }
+    },
+    methods: {
+        getItems: function () {
+            let self = this;
+            this.httpGet('dic/getUsedDics', {type: this.dicType}, function (data) {
+                if (data) {
+                    for (let i = 0; i < data.length; i++) {
+                        self.items.push({
+                            label: data[i].name,
+                            value: data[i].code
+                        });
+                    }
+                }
+            });
+        }
+    },
+    template:
+        '<el-select v-model="selectValue" :placeholder="placeholder" size="small" clearable>' +
+        '   <el-option v-for="item in items" :label="item.label" :value="item.value"></el-option>' +
+        '</el-select>'
+});
+
+Vue.component('dicName', {
+    props: {
+        type: {
+            type: String,
+            default: ''
+        },
+        code: {
+            type: String,
+            default: ''
+        }
+    },
+    data: function () {
+        return {
+            name: ''
+        }
+    },
+    created: function () {
+        this.getDicName();
+    },
+    methods: {
+        getDicName: function () {
+            let self = this;
+            this.httpGet('dic/getUsedDic', {
+                type: this.type,
+                code: this.code
+            }, function (data) {
+                if (data) {
+                    self.name = data.name;
+                }
+            });
+        }
+    },
+    template: '<span>{{name}}</span>'
 });

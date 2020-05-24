@@ -1,12 +1,20 @@
-package com.lbeen.spring.common.web;
+package com.lbeen.spring.common.bean;
 
 public class Result {
-    private int code;
-    private String msg;
-    private Object data;
+    private final int code;
+    private final String msg;
+    private final Object data;
 
     public static Result success() {
-        return new Result(0, null, null);
+        return successMsg(null);
+    }
+
+    public static Result saveSuccess() {
+        return successMsg("保存成功");
+    }
+
+    public static Result successMsg(String msg) {
+        return new Result(0, msg, null);
     }
 
     public static Result success(Object data) {

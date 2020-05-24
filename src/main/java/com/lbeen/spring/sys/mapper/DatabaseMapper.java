@@ -1,7 +1,7 @@
-package com.lbeen.spring.database.mapper;
+package com.lbeen.spring.sys.mapper;
 
-import com.lbeen.spring.database.bean.Database;
-import com.lbeen.spring.database.bean.Table;
+import com.lbeen.spring.sys.bean.Database;
+import com.lbeen.spring.sys.bean.Table;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lbeen.spring.sys.mapper.MenuMapper">
+    <select id="selectTopList" resultType="menu">
+        select * from t_menu where parentId is null order by sort
+    </select>
+    <select id="selectList" resultType="menu" parameterType="String">
+        select * from t_menu where parentId = #{parentId} order by sort
+    </select>
+
+    <select id="selectAllUsed" resultType="menu">
+        select * from t_menu where used='1' order by sort
+    </select>
+
+    <select id="selectById" resultType="menu" parameterType="String">
+        select * from t_menu where id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="menu">
+        insert into t_menu
+        (id,parentId,name,url,icon,sort,used)
+        values
+        (#{id},#{parentId},#{name},#{url},#{icon},#{sort},#{used})
+    </insert>
+
+    <update id="update" parameterType="menu">
+        update t_menu
+        <set>
+            <if test="name != null">
+                name=#{name},
+            </if>
+            <if test="url != null">
+                url=#{url},
+            </if>
+            <if test="icon != null">
+                icon=#{icon},
+            </if>
+            <if test="sort != null">
+                sort=#{sort},
+            </if>
+            <if test="used != null">
+                used=#{used},
+            </if>
+        </set>
+        where id=#{id}
+    </update>
+</mapper>

@@ -2,28 +2,31 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.lbeen.spring.database.mapper.TableMapper">
+<mapper namespace="com.lbeen.spring.sys.mapper.TableMapper">
     <sql id="where">
+        <if test="id != null">
+            and t.id = #{id}
+        </if>
         <if test="dbId != null">
-            and dbId = #{dbId}
+            and t.dbId = #{dbId}
         </if>
         <if test="tableName != null">
-            and tableName = #{tableName}
+            and t.tableName = #{tableName}
         </if>
         <if test="tableDesc != null">
-            and tableDesc like '%${tableDesc}%'
+            and t.tableDesc like '%${tableDesc}%'
         </if>
     </sql>
 
     <select id="count" resultType="Integer" parameterType="map">
-        select count(1) from t_table t join t_database d on t.dbId=d.id
+        select count(1) from t_table t left join t_database d on t.dbId=d.id
         <where>
             <include refid="where"/>
         </where>
     </select>
 
     <select id="selectPage" resultType="map" parameterType="map">
-        select t.*,d.dbDesc from t_table t join t_database d on t.dbId=d.id
+        select t.*,d.dbDesc from t_table t left join t_database d on t.dbId=d.id
         <where>
             <include refid="where"/>
         </where>
@@ -31,7 +34,11 @@
     </select>
 
     <select id="selectOne" resultType="table" parameterType="String">
-        select * from t_table where id = #{id}
+        select * from t_table t
+        <where>
+            <include refid="where"/>
+        </where>
+        limit 1
     </select>
 
     <insert id="insert" parameterType="database">
@@ -60,4 +67,21 @@
     <delete id="delete" parameterType="String">
         delete from t_table where id = #{id}
     </delete>
+
+    <select id="selectColumnsByTableId" resultType="tableColumn" parameterType="String">
+        select * from t_table_column where tableId=#{tableId}
+    </select>
+
+    <select id="deleteColumnsByTableId" parameterType="String">
+        delete from t_table_column where tableId=#{tableId}
+    </select>
+
+    <insert id="insertColumns" parameterType="List">
+        insert into t_table_column
+        (id,tableId,columnName,columnDesc,columnType)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id},#{item.tableId},#{item.columnName},#{item.columnDesc},#{item.columnType})
+        </foreach>
+    </insert>
 </mapper>

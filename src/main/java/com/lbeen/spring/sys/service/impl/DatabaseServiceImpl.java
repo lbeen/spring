@@ -1,14 +1,13 @@
-package com.lbeen.spring.database.service.impl;
+package com.lbeen.spring.sys.service.impl;
 
 import com.lbeen.spring.common.bean.Page;
 import com.lbeen.spring.common.util.CommonUtil;
-import com.lbeen.spring.common.util.R;
 import com.lbeen.spring.common.util.SqlUtil;
-import com.lbeen.spring.database.bean.Database;
-import com.lbeen.spring.database.bean.Table;
-import com.lbeen.spring.database.mapper.DatabaseMapper;
-import com.lbeen.spring.database.mapper.TableMapper;
-import com.lbeen.spring.database.service.DatabaseService;
+import com.lbeen.spring.sys.bean.Database;
+import com.lbeen.spring.sys.bean.Table;
+import com.lbeen.spring.sys.mapper.DatabaseMapper;
+import com.lbeen.spring.sys.mapper.TableMapper;
+import com.lbeen.spring.sys.service.DatabaseService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
@@ -43,7 +42,7 @@ public class DatabaseServiceImpl implements DatabaseService {
     public void saveDatabase(Database database) {
         database.setDbDesc(database.getIp() + "_" + database.getPort() + "_" + database.getDbName());
         if (StringUtils.isBlank(database.getId())) {
-            database.setId(R.uuid());
+            database.setId(CommonUtil.uuid());
             databaseMapper.insert(database);
         } else {
             databaseMapper.update(database);
@@ -54,36 +53,6 @@ public class DatabaseServiceImpl implements DatabaseService {
     public void deleteDatabase(String id) {
         databaseMapper.delete(id);
     }
-
-    @Override
-    public Page getTablePage(Integer skip, Integer limit, String dbId, String tableName, String tableDesc) {
-        Map<String, Object> param = new HashMap<>();
-        CommonUtil.putIfNotBlank(param, "dbId", dbId);
-        CommonUtil.putIfNotBlank(param, "tableName", tableName);
-        CommonUtil.putIfNotBlank(param, "tableDesc", tableDesc);
-        return SqlUtil.queryPage(tableMapper::count, tableMapper::selectPage, param, skip, limit);
-    }
-
-    @Override
-    public Table getOneTable(String id) {
-        return tableMapper.selectOne(id);
-    }
-
-    @Override
-    public void saveTable(Table table) {
-        if (StringUtils.isBlank(table.getId())) {
-            table.setId(R.uuid());
-            tableMapper.insert(table);
-        } else {
-            tableMapper.update(table);
-        }
-    }
-
-    @Override
-    public void deleteTable(String id) {
-        tableMapper.delete(id);
-    }
-
 
     @Override
     public List<Database> getUsedMongoDbs() {

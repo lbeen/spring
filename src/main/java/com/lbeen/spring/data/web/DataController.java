@@ -1,12 +1,12 @@
 package com.lbeen.spring.data.web;
 
 import com.alibaba.fastjson.JSONObject;
+import com.lbeen.spring.common.bean.Result;
+import com.lbeen.spring.common.util.CommonUtil;
 import com.lbeen.spring.common.util.MongoUtil;
-import com.lbeen.spring.common.util.R;
-import com.lbeen.spring.common.web.Result;
 import com.lbeen.spring.constants.MongoTable;
-import com.lbeen.spring.database.bean.Table;
-import com.lbeen.spring.database.service.DatabaseService;
+import com.lbeen.spring.sys.bean.Table;
+import com.lbeen.spring.sys.service.DatabaseService;
 import com.mongodb.BasicDBObject;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -33,7 +33,7 @@ public class DataController {
     @RequestMapping("upload")
     public Object upload(@RequestParam("file") MultipartFile srcFile) throws Exception {
         String filename = srcFile.getOriginalFilename();
-        String tmpFileName = R.uuid() + "." + StringUtils.substringAfterLast(filename, ".");
+        String tmpFileName = CommonUtil.uuid() + "." + StringUtils.substringAfterLast(filename, ".");
         try (InputStream is = srcFile.getInputStream();
              FileOutputStream os = new FileOutputStream(uploadTmpPath + tmpFileName)
         ) {
@@ -96,7 +96,7 @@ public class DataController {
         @SuppressWarnings("unchecked")
         Map<String, Integer> heads = (Map<String, Integer>) json.get("heads");
 
-        Table table = databaseService.getOneTable(tableId);
+        Table table = null;
         if (table == null) {
             return Result.error("表不存在");
         }
@@ -117,7 +117,7 @@ public class DataController {
                 if (document.isEmpty()) {
                     continue;
                 }
-                document.put("_id", R.uuid());
+                document.put("_id", CommonUtil.uuid());
                 inserts.add(document);
 
                 if (inserts.size() == 5000) {

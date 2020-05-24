@@ -1,4 +1,4 @@
-package com.lbeen.spring.database.bean;
+package com.lbeen.spring.sys.bean;
 
 /**
  * CREATE TABLE `t_table` (

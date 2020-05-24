@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>菜单配置</title>
+    <link rel="stylesheet" href="../../common/element/index.css">
+    <link rel="stylesheet" href="../../common/css/common.css">
+    <script src="../../common/vue/vue.js"></script>
+    <script src="../../common/vue/vue-resource.js"></script>
+    <script src="../../common/element/index.js"></script>
+    <script src="../../common/js/common.js"></script>
+</head>
+<body>
+<div id="app">
+    <el-row>
+        <el-form :inline="true">
+            <el-form-item>
+                <el-button type="success" @click="addMenu" size="small">新增一级菜单</el-button>
+            </el-form-item>
+        </el-form>
+    </el-row>
+
+    <el-row>
+        <el-table :data="menus" row-key="id" border lazy :load="loadChildren" stripe>
+            <el-table-column prop="name" label="名称" width="250" align="left"></el-table-column>
+            <el-table-column prop="url" label="URL"></el-table-column>
+            <el-table-column prop="icon" label="ICON" width="180"></el-table-column>
+            <el-table-column label="状态" width="100">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.used == '1'">启用</span>
+                    <span v-if="scope.row.used != '1'">禁用</span>
+                </template>
+            </el-table-column>
+            <el-table-column prop="sort" label="排序" width="80"></el-table-column>
+            <el-table-column label="操作">
+                <template slot-scope="scope">
+                    <el-button type="primary" @click="editMenu(scope.row.id)" size="small">修改</el-button>
+                    <el-button type="success" @click="addChild(scope.row.id)" size="small">新增子菜单</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+    </el-row>
+
+    <el-dialog :title="formTitle" :visible.sync="isShowForm" width="500px">
+        <el-form label-width="100px">
+            <el-form-item label="名称">
+                <el-input v-model="form.name" size="small" placeholder="请输入名称"></el-input>
+            </el-form-item>
+            <el-form-item label="url">
+                <el-input v-model="form.url" size="small" placeholder="请输入url"></el-input>
+            </el-form-item>
+            <el-form-item label="icon">
+                <el-input v-model="form.icon" size="small" placeholder="请输入icon"></el-input>
+            </el-form-item>
+            <el-form-item label="排序">
+                <el-input-number v-model="form.sort" size="small" placeholder="请输入排序" step="100"></el-input-number>
+            </el-form-item>
+            <el-form-item label="启用">
+                <el-switch v-model="form.used" active-color="#13ce66" inactive-color="gray"></el-switch>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="isShowForm = false">取 消</el-button>
+            <el-button type="primary" @click="saveMenu">保 存</el-button>
+        </div>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            menus: [],
+
+            isShowForm: false,
+            formTitle: '',
+            form: {
+                id: '',
+                parentId: '',
+                name: '',
+                url: '',
+                icon: '',
+                sort: '',
+                used: false,
+            }
+        },
+        created: function () {
+            this.loadTopMenu();
+        },
+        methods: {
+            loadData: function (parentId, callBack) {
+                this.httpGet("menu/getMenus", {parentId: parentId}, function (data) {
+                    let menus = [];
+                    if (menus) {
+                        for (let i = 0; i < data.length; i++) {
+                            let menu = data[i];
+                            menus.push({
+                                id: menu.id,
+                                name: menu.name,
+                                url: menu.url,
+                                icon: menu.icon,
+                                sort: menu.sort,
+                                used: menu.used,
+                                hasChildren: true
+                            })
+                        }
+                    }
+                    callBack(menus);
+                });
+            },
+            loadTopMenu: function () {
+                let self = this;
+                this.loadData(null, function (menus) {
+                    self.menus = menus;
+                });
+            },
+            loadChildren: function (tree, treeNode, resolve) {
+                this.loadData(tree.id, resolve);
+            },
+            resetForm: function () {
+                this.form = {
+                    id: '',
+                    parentId: '',
+                    name: '',
+                    url: '',
+                    icon: '',
+                    sort: '',
+                    used: false
+                };
+            },
+            addMenu: function () {
+                this.resetForm();
+                this.formTitle = '新增菜单';
+                this.isShowForm = true;
+            },
+            addChild: function (parentId) {
+                this.resetForm();
+                this.form.parentId = parentId;
+                this.formTitle = '新增菜单';
+                this.isShowForm = true;
+            },
+            editMenu: function (id) {
+                this.resetForm();
+                this.formTitle = '修改菜单';
+                this.isShowForm = true;
+                this.httpGet("menu/getMenuById", {id: id}, function (data) {
+                    if (data) {
+                        app.form.id = data.id;
+                        app.form.parentId = data.parentId;
+                        app.form.name = data.name;
+                        app.form.url = data.url;
+                        app.form.icon = data.icon;
+                        app.form.sort = data.sort;
+                        app.form.used = data.used === '1';
+                    }
+                });
+            },
+            saveMenu: function () {
+                let param = {
+                    id: this.form.id,
+                    parentId: this.form.parentId,
+                    name: this.form.name,
+                    url: this.form.url,
+                    icon: this.form.icon,
+                    sort: this.form.sort,
+                    used: this.form.used ? '1' : '0',
+                }
+                this.postEmulateJSON('menu/saveMenu', param, function () {
+                    app.loadTopMenu();
+                    app.isShowForm = false;
+                });
+            }
+        }
+    })
+</script>
+</html>

@@ -1,13 +1,12 @@
 package com.lbeen.spring.common.util;
 
 import com.lbeen.spring.common.bean.MyMongoClient;
-import com.lbeen.spring.database.bean.Database;
-import com.lbeen.spring.database.bean.Table;
-import com.lbeen.spring.database.service.DatabaseService;
+import com.lbeen.spring.sys.bean.Database;
+import com.lbeen.spring.sys.bean.Table;
+import com.lbeen.spring.sys.service.DatabaseService;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
 import com.mongodb.ServerAddress;
-import com.mongodb.WriteConcern;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import org.bson.Document;
