@@ -28,12 +28,12 @@ public class DatabaseController {
     @RequestMapping("saveDatabase")
     public Result saveDatabase(Database database) {
         databaseService.saveDatabase(database);
-        return Result.success();
+        return Result.saveSuccess();
     }
 
     @RequestMapping("deleteDatabase")
     public Result deleteDatabase(String id) {
         databaseService.deleteDatabase(id);
-        return Result.success();
+        return Result.success("删除成功");
     }
 }
