@@ -6,6 +6,7 @@ public class TableColumn {
     private String columnName;
     private String columnDesc;
     private String columnType;
+    private Integer sort;
 
     public String getId() {
         return id;
@@ -45,5 +46,13 @@ public class TableColumn {
 
     public void setColumnType(String columnType) {
         this.columnType = columnType;
+    }
+
+    public Integer getSort() {
+        return sort;
+    }
+
+    public void setSort(Integer sort) {
+        this.sort = sort;
     }
 }

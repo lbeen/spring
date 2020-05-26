@@ -4,10 +4,10 @@ import com.alibaba.fastjson.JSONObject;
 import com.lbeen.spring.common.bean.Result;
 import com.lbeen.spring.common.util.CommonUtil;
 import com.lbeen.spring.common.util.MongoUtil;
-import com.lbeen.spring.constants.MongoTable;
+import com.lbeen.spring.data.Util.DataUtil;
 import com.lbeen.spring.sys.bean.Table;
-import com.lbeen.spring.sys.service.DatabaseService;
-import com.mongodb.BasicDBObject;
+import com.lbeen.spring.sys.bean.TableColumn;
+import com.lbeen.spring.sys.service.TableService;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
@@ -18,9 +18,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.BiConsumer;
 
 @RestController
 @RequestMapping("/data/")
@@ -28,7 +37,7 @@ public class DataController {
     private final String uploadTmpPath = "E:/uploadTmpPath/";
 
     @Autowired
-    private DatabaseService databaseService;
+    private TableService tableService;
 
     @RequestMapping("upload")
     public Object upload(@RequestParam("file") MultipartFile srcFile) throws Exception {
@@ -53,8 +62,7 @@ public class DataController {
         split = getSplit(split);
 
         try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(uploadTmpPath + tmpFileName), StandardCharsets.UTF_8))) {
-            List<Document> columns = MongoUtil.find(MongoTable.SYS_TABLE_COLUMN, new BasicDBObject("tableId", tableId));
-
+            List<TableColumn> columns = tableService.selectColumnsByTableId(tableId);
 
             int maxLineSize = columns.size();
             List<List<String>> lines = new ArrayList<>();
@@ -96,10 +104,11 @@ public class DataController {
         @SuppressWarnings("unchecked")
         Map<String, Integer> heads = (Map<String, Integer>) json.get("heads");
 
-        Table table = null;
+        Table table = tableService.selectById(tableId);
         if (table == null) {
             return Result.error("表不存在");
         }
+        List<BiConsumer<Document, String[]>> valuePuts = DataUtil.getValuePuts(tableId, heads);
 
         List<Document> inserts = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(uploadTmpPath + tmpFileName), StandardCharsets.UTF_8))) {
@@ -108,11 +117,8 @@ public class DataController {
                 String[] data = line.split(split);
 
                 Document document = new Document();
-                for (Map.Entry<String, Integer> entry : heads.entrySet()) {
-                    if (entry.getValue() >= data.length) {
-                        continue;
-                    }
-                    document.put(entry.getKey(), data[entry.getValue()]);
+                for (BiConsumer<Document, String[]> valuePut : valuePuts) {
+                    valuePut.accept(document, data);
                 }
                 if (document.isEmpty()) {
                     continue;
@@ -129,7 +135,8 @@ public class DataController {
                 MongoUtil.insertList(table.getTableName(), inserts);
                 inserts.clear();
             }
-            return Result.success();
+            return Result.saveSuccess();
         }
+
     }
 }

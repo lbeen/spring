@@ -18,6 +18,57 @@ public class CommonUtil {
         return obj == null ? null : obj.toString();
     }
 
+    public static int toInt(Object obj) {
+        if (obj == null) {
+            return 0;
+        }
+        if (obj instanceof Integer) {
+            return (int) obj;
+        }
+        if (obj instanceof String) {
+            String str = obj.toString();
+            return str.isEmpty() ? 0 : Integer.parseInt(obj.toString());
+        }
+        if (obj instanceof Long) {
+            return Integer.parseInt(obj.toString());
+        }
+        return 0;
+    }
+
+    public static long toLong(Object obj) {
+        if (obj == null) {
+            return 0L;
+        }
+        if (obj instanceof Long) {
+            return (long) obj;
+        }
+        if (obj instanceof String) {
+            String str = obj.toString();
+            return str.isEmpty() ? 0L : Long.parseLong(obj.toString());
+        }
+        if (obj instanceof Integer) {
+            return Long.parseLong(obj.toString());
+        }
+        return 0L;
+    }
+
+    public static double toDouble(Object obj) {
+        if (obj == null) {
+            return 0;
+        }
+        if (obj instanceof Double) {
+            return (double) obj;
+        }
+        if (obj instanceof String) {
+            String str = obj.toString();
+            return str.isEmpty() ? 0 : Double.parseDouble(obj.toString());
+        }
+        if (obj instanceof Long || obj instanceof Integer) {
+            return Double.parseDouble(obj.toString());
+        }
+        return 0;
+    }
+
     public static void putIfNotBlank(Map<String, Object> map, String key, String value) {
         if (StringUtils.isNotBlank(value)) {
             map.put(key, value);

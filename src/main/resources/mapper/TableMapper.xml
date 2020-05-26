@@ -69,7 +69,7 @@
     </delete>
 
     <select id="selectColumnsByTableId" resultType="tableColumn" parameterType="String">
-        select * from t_table_column where tableId=#{tableId}
+        select * from t_table_column where tableId=#{tableId} order by sort
     </select>
 
     <select id="deleteColumnsByTableId" parameterType="String">
@@ -78,10 +78,10 @@
 
     <insert id="insertColumns" parameterType="List">
         insert into t_table_column
-        (id,tableId,columnName,columnDesc,columnType)
+        (id,tableId,columnName,columnDesc,columnType,sort)
         values
         <foreach collection="list" item="item" separator=",">
-            (#{item.id},#{item.tableId},#{item.columnName},#{item.columnDesc},#{item.columnType})
+            (#{item.id},#{item.tableId},#{item.columnName},#{item.columnDesc},#{item.columnType},#{item.sort})
         </foreach>
     </insert>
 </mapper>

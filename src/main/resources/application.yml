@@ -7,6 +7,11 @@ spring:
     url: jdbc:mysql://192.168.0.151:3306/test?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=UTC
     username: root
     password: 123
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: -1
+      max-request-size: -1
 mybatis:
   mapperLocations: classpath:mapper/*.xml
   config-location: classpath:mybatis-config.xml

@@ -41,7 +41,7 @@
             <el-table-column label="表名" prop="tableName" label="IP" width="180"></el-table-column>
             <el-table-column label="表描述" prop="tableDesc"></el-table-column>
             <el-table-column label="数据库" prop="dbDesc" width="220"></el-table-column>
-            <el-table-column label="操作">
+            <el-table-column label="操作" width="250">
                 <template slot-scope="scope">
                     <el-button type="success" @click="editTable(scope.row.id)" size="small">编辑</el-button>
                     <el-button type="danger" @click="deleteTable(scope.row)" size="small">删除</el-button>
@@ -57,7 +57,8 @@
                 <el-input v-model="addForm.tableName" size="small" placeholder="请输入表名"></el-input>
             </el-form-item>
             <el-form-item label="表描述">
-                <el-input v-model="addForm.tableDesc" size="small" placeholder="请输入表描述"></el-input>
+                <el-input type="textarea" :rows="5" v-model="addForm.tableDesc" size="small"
+                          placeholder="请输入表描述"></el-input>
             </el-form-item>
             <el-form-item label="数据库">
                 <el-select v-model="addForm.dbId" placeholder="请选择数据库" style="width: 100%" size="small" clearable>
@@ -82,8 +83,18 @@
     </el-dialog>
 
     <el-dialog title="字段说明" :visible.sync="showColumnsTable">
-        <el-table :data="tableColumns" border max-height="500" :cell-style="{'text-align': 'center'}"
-                  :header-cell-style="{'text-align': 'center','background-color': '#f5f7fa'}">
+        <el-row style="margin-bottom: 10px">
+            <el-col :span="16">
+                <el-input v-model="columnsDesc" size="small" type="textarea" placeholder="请输入字段说明"></el-input>
+            </el-col>
+            <el-col :span="8">
+                <div  style="margin-left: 10px; margin-top: 5px">
+                    <el-button type="primary" @click="analysisColumnsDesc">解析</el-button>
+                    <el-button type="success" @click="addTableColumn">新增</el-button>
+                </div>
+            </el-col>
+        </el-row>
+        <el-table :data="tableColumns" border max-height="500">
             <el-table-column label="序号" width="50" type="index"></el-table-column>
             <el-table-column label="字段" width="150">
                 <template slot-scope="scope">
@@ -102,6 +113,12 @@
                     </el-select>
                 </template>
             </el-table-column>
+            <el-table-column label="向上" width="50">
+                <template slot-scope="scope">
+                    <i v-if="scope.$index != 0" class="el-icon-top" style="color: red;cursor: pointer;"
+                       @click="upColumn(scope.$index)"></i>
+                </template>
+            </el-table-column>
             <el-table-column label="删除" width="50">
                 <template slot-scope="scope">
                     <i class="el-icon-delete" style="color: red;cursor: pointer;"
@@ -111,7 +128,6 @@
         </el-table>
         <div slot="footer" class="dialog-footer">
             <el-button @click="showColumnsTable = false" size="small">取 消</el-button>
-            <el-button type="success" @click="addTableColumn" size="small">新增</el-button>
             <el-button type="primary" @click="saveTableColumns" size="small">保 存</el-button>
         </div>
     </el-dialog>
@@ -146,7 +162,8 @@
             currentTableId: '',
             tableColumns: [],
 
-            columnTypeOption: []
+            columnTypeOption: [],
+            columnsDesc:''
         },
         created: function () {
             this.getDbs();
@@ -258,18 +275,44 @@
             editColumns: function (tableId) {
                 this.currentTableId = tableId;
                 this.tableColumns = [];
+                this.columnsDesc = '';
                 this.showColumnsTable = true;
                 this.httpGet('table/getColumnsByTableId', {
                     tableId: tableId
                 }, function (data) {
-                    debugger
                     if (data) {
                         app.tableColumns = data;
                     }
                 });
             },
+            analysisColumnsDesc:function(){
+                if (!this.columnsDesc) {
+                    return;
+                }
+                let arr = this.columnsDesc.split(",");
+                for (let i = 0; i < arr.length; i++) {
+                    this.tableColumns.push({
+                        columnDesc:arr[i],
+                        columnType:'string'
+                    });
+                }
+            },
             addTableColumn: function () {
                 this.tableColumns.push({});
+            },
+            upColumn: function (columnIndex) {
+                let tableColumns = [];
+                for (let i = 0; i < this.tableColumns.length;) {
+                    if (i === columnIndex - 1) {
+                        tableColumns.push(this.tableColumns[i + 1]);
+                        tableColumns.push(this.tableColumns[i]);
+                        i += 2;
+                    } else {
+                        tableColumns.push(this.tableColumns[i]);
+                        i++;
+                    }
+                }
+                this.tableColumns = tableColumns;
             },
             deleteColumn: function (columnIndex) {
                 var tableColumns = [];
@@ -283,12 +326,14 @@
             saveTableColumns: function () {
                 var tableColumns = [];
                 for (var i = 0; i < this.tableColumns.length; i++) {
+                    debugger
                     var tableColumn = this.tableColumns[i];
                     if (!tableColumn.columnName || !tableColumn.columnDesc || !tableColumn.columnType) {
                         this.$message.error('请完善字段信息');
                         return;
                     }
                     tableColumns.push({
+                        sort: i,
                         columnName: tableColumn.columnName,
                         columnDesc: tableColumn.columnDesc,
                         columnType: tableColumn.columnType
@@ -301,7 +346,7 @@
 
                 this.httpPost('table/insertColumns', {
                     tableId: this.currentTableId,
-                    tableColumns: this.tableColumns
+                    tableColumns: tableColumns
                 }, function () {
                     $('#search').click();
                     app.showColumnsTable = false;

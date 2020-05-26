@@ -71,10 +71,10 @@
     </delete>
 
     <select id="getUsedMongoDbs" resultType="database">
-         select * from t_database where dbType='1' and used='1'
+         select * from t_database where dbType='mongo' and used='1'
     </select>
 
     <select id="getUsedMongoTables" resultType="table">
-        select t.* from t_table t join t_database d on t.dbId=d.id where d.dbType='1' and d.used='1'
+        select t.* from t_table t join t_database d on t.dbId=d.id where d.dbType='mongo' and d.used='1'
     </select>
 </mapper>

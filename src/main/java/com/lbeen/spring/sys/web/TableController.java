@@ -8,8 +8,6 @@ import com.lbeen.spring.common.util.MongoUtil;
 import com.lbeen.spring.sys.bean.Table;
 import com.lbeen.spring.sys.bean.TableColumn;
 import com.lbeen.spring.sys.service.TableService;
-import org.apache.commons.lang3.StringUtils;
-import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,6 +61,7 @@ public class TableController {
             column.setColumnName(CommonUtil.tosString(map.get("columnName")));
             column.setColumnDesc(CommonUtil.tosString(map.get("columnDesc")));
             column.setColumnType(CommonUtil.tosString(map.get("columnType")));
+            column.setSort(CommonUtil.toInt(map.get("sort")));
             columns.add(column);
         }
         return tableService.insertColumns(tableId, columns);

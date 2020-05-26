@@ -47,7 +47,7 @@
                 this.httpGet("menu/getMenuTree", null, function (menus) {
                     if (menus) {
                         app.menus = menus;
-                        app.iframeSrc = projectName + this.menus[0].subs[0].index;
+                        app.iframeSrc = projectName + app.menus[0].subs[0].index;
                     }
                 });
             },

@@ -3,25 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
-    <link rel="stylesheet" href="/static/common/element/index.css">
-    <script src="/static/common/vue/vue.js"></script>
-    <script src="/static/common/vue/vue-resource.js"></script>
-    <script src="/static/common/element/index.js"></script>
-    <script src="/static/common/vue/vueComponent.js"></script>
+    <link rel="stylesheet" href="../../common/element/index.css">
+    <link rel="stylesheet" href="../../common/css/common.css">
+    <script src="../../common/vue/vue.js"></script>
+    <script src="../../common/vue/vue-resource.js"></script>
+    <script src="../../common/element/index.js"></script>
+    <script src="../../common/js/jquery3.5.1.js"></script>
+    <script src="../../common/js/common.js"></script>
 </head>
 <body>
 <div id="app" v-loading.fullscreen.lock="fullscreenLoading">
-    <el-row>
-        <el-alert title="数据导入" type="success"></el-alert>
-    </el-row>
-
     <el-row>
         <el-form :inline="true">
             <el-form-item :label="fileName">
                 <el-button type="success" @click="isShowUpload = true" size="small">上传文件</el-button>
             </el-form-item>
             <el-form-item label="数据表">
-                <el-select v-model="tableId" placeholder="请选择数据表" style="width: 100%" size="small" clearable>
+                <el-select v-model="tableId" placeholder="请选择数据表" style="width: 100%" size="small" clearable filterable>
                     <el-option v-for="item in tableOptions" :label="item.label" :value="item.value"
                                size="small"></el-option>
                 </el-select>
@@ -33,18 +31,19 @@
                 </el-select>
             </el-form-item>
             <el-form-item label="预览数量">
-                <el-input-number v-model="previewCount" size="small" :min="1" :max="100"></el-input-number>
+                <el-input-number v-model="previewCount" size="small" :min="1" :max="100" :step="10"></el-input-number>
             </el-form-item>
             <el-form-item>
                 <el-button type="primary" @click="preview" size="small">预览</el-button>
                 <el-button type="success" @click="saveData" size="small">保存</el-button>
+                <el-button type="success" @click="showProgress = true" size="small">进度条</el-button>
             </el-form-item>
         </el-form>
     </el-row>
 
     <el-table :data="lines" border :cell-style="{'text-align': 'center'}" max-height="600"
               :header-cell-style="{'text-align': 'center','background-color': '#f5f7fa'}">
-        <el-table-column v-for="(item,index)  in maxLineSize">
+        <el-table-column v-for="(item,index)  in maxLineSize" min-width="150">
             <template slot="header" slot-scope="scope">
                 <el-select v-model="heads[index]" placeholder="请选择表头" style="width: 100%" size="small" clearable>
                     <el-option v-for="item in columns" :label="item.label" :value="item.value"></el-option>
@@ -57,7 +56,8 @@
     <el-dialog title="上传文件" :visible.sync="isShowUpload" width="30%">
         <el-form label-width="100px">
             <el-form-item label="文件">
-                <el-upload ref="upload" class="upload-demo" action="/data/upload" :on-success="handleUploadSuccess"
+                <el-upload ref="upload" class="upload-demo" :action="projectName + 'data/upload'"
+                           :on-success="handleUploadSuccess"
                            :multiple="false" :auto-upload="false">
                     <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
                 </el-upload>
@@ -68,12 +68,26 @@
             <el-button type="primary" size="small" @click="submitUpload">确 定</el-button>
         </span>
     </el-dialog>
+
+    <el-dialog title="导入进度" :visible.sync="showProgress" before-close width="180px" :before-close="beforeClose" :show-close="false">
+        <el-progress type="circle" :percentage="percentage"></el-progress>
+<!--        <el-button type="primary" size="small" @click="submitUpload">确 定</el-button>-->
+<!--            <el-button type="primary" size="small" @click="submitUpload">确 定</el-button>-->
+
+        <span slot="footer" class="dialog-footer">
+<!--            <el-button size="small" @click="isShowUpload = false">取 消</el-button>-->
+            <el-button type="primary" size="small" @click="showProgress == false">确 定</el-button>
+        </span>
+    </el-dialog>
 </div>
 </body>
 <script>
     var app = new Vue({
         el: '#app',
         data: {
+            showProgress:false,
+            percentage:0,
+
             tableId: '',
             fileName: '',
             tmpFileName: '',
@@ -102,27 +116,23 @@
         }
         ,
         methods: {
+            beforeClose:function(){
+
+            },
             getTables: function () {
-                this.$http.get('/database/getTablePage', {
-                    params: {
-                        pageSize: 100,
-                        currentPage: 1
-                    }
-                }).then(function (res) {
-                    let data = res.body;
+                this.httpGet('table/getPage', {
+                    pageSize: 100,
+                    currentPage: 1
+                }, function (data) {
                     if (data) {
                         for (let i = 0; i < data.list.length; i++) {
                             var table = data.list[i];
-                            this.tableOptions.push({
-                                label: table.tableName + '(' + table.tableDesc + ')',
+                            app.tableOptions.push({
+                                label: table.tableName,
                                 value: table.id,
                             });
                         }
-                    } else {
-                        console.log(res);
                     }
-                }).catch(function (res) {
-                    console.log(res);
                 });
             }
             ,
@@ -149,34 +159,29 @@
                     this.$message.error('请选择数据表');
                     return;
                 }
-                this.$http.get('/data/preview', {
-                    params: {
-                        tmpFileName: this.tmpFileName,
-                        tableId: this.tableId,
-                        split: this.split,
-                        previewCount: this.previewCount,
-                    }
-                }).then(function (res) {
-                    this.maxLineSize = 0;
-                    this.columns = [];
-                    this.heads = [];
-                    if (res.body.code === 0) {
-                        this.maxLineSize = res.body.data.maxLineSize;
-                        this.lines = res.body.data.lines;
 
-                        let columns = res.body.data.columns;
+                this.httpGet('data/preview', {
+                    tmpFileName: this.tmpFileName,
+                    tableId: this.tableId,
+                    split: this.split,
+                    previewCount: this.previewCount
+                }, function (res) {
+                    app.maxLineSize = 0;
+                    app.columns = [];
+                    app.heads = [];
+                    if (res.code === 0) {
+                        app.maxLineSize = res.data.maxLineSize;
+                        app.lines = res.data.lines;
+
+                        let columns = res.data.columns;
                         for (let i = 0; i < columns.length; i++) {
-                            this.heads.push(columns[i].column);
-                            this.columns.push({
-                                label: columns[i].desc,
-                                value: columns[i].column,
+                            app.heads.push(columns[i].columnName);
+                            app.columns.push({
+                                label: columns[i].columnDesc,
+                                value: columns[i].columnName,
                             });
                         }
-                    } else {
-                        console.log(res)
                     }
-                }).catch(function (res) {
-                    console.log(res);
                 });
             },
             saveData: function () {
@@ -199,28 +204,19 @@
                     heads[this.heads[i]] = i;
                 }
 
-
                 this.fullscreenLoading = true;
-                this.$http.post('/data/saveData', {
+                this.httpPost('data/saveData', {
                     tmpFileName: this.tmpFileName,
                     tableId: this.tableId,
                     split: this.split,
                     heads: heads
-                }).then(function (res) {
-                    var data = res.body;
-                    if (data.code === 0) {
-                        app.$message.success('保存成功');
-                        app.maxLineSize = 0;
-                        app.columns = [];
-                        app.heads = [];
-                        app.lines = [];
-                    } else {
-                        app.$message.error(data.msg);
-                    }
+                }, function () {
+                    app.maxLineSize = 0;
+                    app.columns = [];
+                    app.heads = [];
+                    app.lines = [];
                     app.fullscreenLoading = false;
-                }).catch(function (res) {
-                    console.log(res);
-                    app.$message.error('保存失败');
+                }, function () {
                     app.fullscreenLoading = false;
                 });
             }
