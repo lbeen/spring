@@ -3,8 +3,8 @@ package com.lbeen.spring.data.web;
 import com.alibaba.fastjson.JSONObject;
 import com.lbeen.spring.common.bean.Result;
 import com.lbeen.spring.common.util.CommonUtil;
-import com.lbeen.spring.common.util.MongoUtil;
-import com.lbeen.spring.data.Util.DataUtil;
+import com.lbeen.spring.data.util.DataImporter;
+import com.lbeen.spring.data.util.DataUtil;
 import com.lbeen.spring.sys.bean.Table;
 import com.lbeen.spring.sys.bean.TableColumn;
 import com.lbeen.spring.sys.service.TableService;
@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -35,6 +36,8 @@ import java.util.function.BiConsumer;
 @RequestMapping("/data/")
 public class DataController {
     private final String uploadTmpPath = "E:/uploadTmpPath/";
+
+    private final static Map<String, DataImporter> CACHE = new HashMap<>();
 
     @Autowired
     private TableService tableService;
@@ -97,7 +100,7 @@ public class DataController {
     }
 
     @RequestMapping("saveData")
-    public Object saveData(@RequestBody JSONObject json) throws Exception {
+    public Object saveData(@RequestBody JSONObject json) {
         String tmpFileName = json.getString("tmpFileName");
         String tableId = json.getString("tableId");
         String split = getSplit(json.getString("split"));
@@ -108,35 +111,33 @@ public class DataController {
         if (table == null) {
             return Result.error("表不存在");
         }
+
         List<BiConsumer<Document, String[]>> valuePuts = DataUtil.getValuePuts(tableId, heads);
 
-        List<Document> inserts = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(uploadTmpPath + tmpFileName), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] data = line.split(split);
+        DataImporter dataImporter = new DataImporter(new File(uploadTmpPath + tmpFileName), split, table.getTableName(), valuePuts);
+        dataImporter.importData();
 
-                Document document = new Document();
-                for (BiConsumer<Document, String[]> valuePut : valuePuts) {
-                    valuePut.accept(document, data);
-                }
-                if (document.isEmpty()) {
-                    continue;
-                }
-                document.put("_id", CommonUtil.uuid());
-                inserts.add(document);
+        String uuid = CommonUtil.uuid();
+        CACHE.put(uuid, dataImporter);
+        return Result.success(uuid);
+    }
 
-                if (inserts.size() == 5000) {
-                    MongoUtil.insertList(table.getTableName(), inserts);
-                    inserts.clear();
-                }
-            }
-            if (!inserts.isEmpty()) {
-                MongoUtil.insertList(table.getTableName(), inserts);
-                inserts.clear();
-            }
-            return Result.saveSuccess();
+    @RequestMapping("getImportStatus")
+    public Object getImportStatus(String uuid) {
+        if (StringUtils.isBlank(uuid)) {
+            return Result.error("获取导入状态失败");
         }
-
+        DataImporter dataImporter = CACHE.get(uuid);
+        if (dataImporter == null) {
+            return Result.error("获取导入状态失败");
+        }
+        Map<String, Object> status = new HashMap<>();
+        status.put("total", dataImporter.getTotal());
+        status.put("imported", dataImporter.getImported());
+        status.put("finish", dataImporter.isFinish());
+        if (dataImporter.isFinish()) {
+            CACHE.remove(uuid);
+        }
+        return Result.success(status);
     }
 }

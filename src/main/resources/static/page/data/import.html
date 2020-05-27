@@ -12,7 +12,7 @@
     <script src="../../common/js/common.js"></script>
 </head>
 <body>
-<div id="app" v-loading.fullscreen.lock="fullscreenLoading">
+<div id="app">
     <el-row>
         <el-form :inline="true">
             <el-form-item :label="fileName">
@@ -36,7 +36,7 @@
             <el-form-item>
                 <el-button type="primary" @click="preview" size="small">预览</el-button>
                 <el-button type="success" @click="saveData" size="small">保存</el-button>
-                <el-button type="success" @click="showProgress = true" size="small">进度条</el-button>
+<!--                <el-button type="success" @click="showProgress = true" size="small">进度条</el-button>-->
             </el-form-item>
         </el-form>
     </el-row>
@@ -69,14 +69,16 @@
         </span>
     </el-dialog>
 
-    <el-dialog title="导入进度" :visible.sync="showProgress" before-close width="180px" :before-close="beforeClose" :show-close="false">
-        <el-progress type="circle" :percentage="percentage"></el-progress>
-<!--        <el-button type="primary" size="small" @click="submitUpload">确 定</el-button>-->
-<!--            <el-button type="primary" size="small" @click="submitUpload">确 定</el-button>-->
-
-        <span slot="footer" class="dialog-footer">
-<!--            <el-button size="small" @click="isShowUpload = false">取 消</el-button>-->
-            <el-button type="primary" size="small" @click="showProgress == false">确 定</el-button>
+    <el-dialog title="导入进度" :visible.sync="showProgress" before-close width="570px" :before-close="beforeClose"
+               :show-close="false">
+        <el-row>
+            <el-progress :text-inside="true" :stroke-width="26" :percentage="percentage"></el-progress>
+        </el-row>
+        <el-row style="margin-top: 5px">
+            <el-alert :title="importInfo" type="success" :closable="false"></el-alert>
+        </el-row>
+        <span slot="footer" class="dialog-footer" v-if="showCloseProgress">
+            <el-button type="primary" size="small" @click="showProgress = false">关闭</el-button>
         </span>
     </el-dialog>
 </div>
@@ -85,9 +87,6 @@
     var app = new Vue({
         el: '#app',
         data: {
-            showProgress:false,
-            percentage:0,
-
             tableId: '',
             fileName: '',
             tmpFileName: '',
@@ -109,14 +108,19 @@
             lines: [],
 
             isShowUpload: false,
-            fullscreenLoading: false
+
+            importInfo: '',
+            showProgress: false,
+            showCloseProgress: false,
+            percentage: 0,
+            importStatusInterval: ''
         },
         created: function () {
             this.getTables();
         }
         ,
         methods: {
-            beforeClose:function(){
+            beforeClose: function () {
 
             },
             getTables: function () {
@@ -204,21 +208,68 @@
                     heads[this.heads[i]] = i;
                 }
 
-                this.fullscreenLoading = true;
                 this.httpPost('data/saveData', {
                     tmpFileName: this.tmpFileName,
                     tableId: this.tableId,
                     split: this.split,
                     heads: heads
-                }, function () {
-                    app.maxLineSize = 0;
-                    app.columns = [];
-                    app.heads = [];
-                    app.lines = [];
-                    app.fullscreenLoading = false;
-                }, function () {
-                    app.fullscreenLoading = false;
+                }, function (data) {
+                    app.showCloseProgress = false;
+                    app.showProgress = true;
+                    app.importStatus(data);
                 });
+            },
+            importStatus: function (uuid) {
+                this.importInfo = '';
+                let startTime = new Date().getTime();
+                this.importStatusInterval = setInterval(function () {
+                    app.postEmulateJSON('data/getImportStatus', {
+                        uuid: uuid
+                    }, function (data) {
+                        app.setImportInfo(startTime, data);
+                        if (data.finish) {
+                            app.showCloseProgress = true;
+                            app.maxLineSize = 0;
+                            app.columns = [];
+                            app.heads = [];
+                            app.lines = [];
+                            clearInterval(app.importStatusInterval);
+                        }
+                    });
+                }, 500);
+            },
+            setImportInfo: function (startTime, data) {
+                let cost = new Date().getTime() - startTime;
+                let total = data.total;
+                if (!total) {
+                    this.percentage = 0;
+                    this.importInfo = '总数：计算中，耗时：' + this.getTimeShow(cost);
+                    return;
+                }
+                let imported = data.imported;
+                if (!imported) {
+                    this.percentage = 0;
+                    this.importInfo = '总数：' + total + '，已导入0，耗时：' + this.getTimeShow(cost);
+                    return;
+                }
+
+                let percent = imported / total;
+                this.percentage = Number((percent * 100).toFixed(2));
+                let remaining = this.getTimeShow(cost / percent - cost);
+                console.log(startTime, cost, remaining, this.percentage);
+                this.importInfo = '总数：' + total + '，已导入: ' + imported + '，耗时：' + this.getTimeShow(cost) + '，预计还需' + remaining;
+            },
+            getTimeShow: function (millis) {
+                let second = Math.round(millis / 100);
+                let minutes = Math.floor(second / 60);
+                second = second - minutes * 60;
+
+                let info = '';
+                if (minutes !== 0) {
+                    info += minutes + '分';
+                }
+                info += second + '秒';
+                return info;
             }
         }
     })

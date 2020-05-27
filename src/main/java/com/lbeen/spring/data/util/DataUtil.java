@@ -1,4 +1,4 @@
-package com.lbeen.spring.data.Util;
+package com.lbeen.spring.data.util;
 
 import com.lbeen.spring.common.util.CommonUtil;
 import com.lbeen.spring.common.util.SpringUtil;
