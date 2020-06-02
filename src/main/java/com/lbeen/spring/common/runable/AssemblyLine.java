@@ -20,7 +20,7 @@ public class AssemblyLine<T> {
     }
 
     private AssemblyLine(AssemblyLineWorkerFactory<T> workerFactory, int producerCount, int consumerCount) {
-        this.queue = new LinkedBlockingQueue<>();
+        this.queue = new LinkedBlockingQueue<>(5000000);
 
         this.workerFactory = workerFactory;
 

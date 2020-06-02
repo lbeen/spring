@@ -88,7 +88,7 @@
                 <el-input v-model="columnsDesc" size="small" type="textarea" placeholder="请输入字段说明"></el-input>
             </el-col>
             <el-col :span="8">
-                <div  style="margin-left: 10px; margin-top: 5px">
+                <div style="margin-left: 10px; margin-top: 5px">
                     <el-button type="primary" @click="analysisColumnsDesc">解析</el-button>
                     <el-button type="success" @click="addTableColumn">新增</el-button>
                 </div>
@@ -98,7 +98,7 @@
             <el-table-column label="序号" width="50" type="index"></el-table-column>
             <el-table-column label="字段" width="150">
                 <template slot-scope="scope">
-                    <el-input v-model="scope.row.columnName" size="small" placeholder="请输入字段名"></el-input>
+                    <el-input v-model="scope.row.columnName" size="small" placeholder="请输入字段名" clearable></el-input>
                 </template>
             </el-table-column>
             <el-table-column label="描述">
@@ -163,7 +163,7 @@
             tableColumns: [],
 
             columnTypeOption: [],
-            columnsDesc:''
+            columnsDesc: ''
         },
         created: function () {
             this.getDbs();
@@ -285,15 +285,27 @@
                     }
                 });
             },
-            analysisColumnsDesc:function(){
+            analysisColumnsDesc: function () {
                 if (!this.columnsDesc) {
                     return;
                 }
-                let arr = this.columnsDesc.split(",");
+                let split;
+                if (this.columnsDesc.indexOf(",") >= 0) {
+                    split = ",";
+                } else if (this.columnsDesc.indexOf("，") >= 0) {
+                    split = "，";
+                } else if (this.columnsDesc.indexOf("\t") >= 0) {
+                    split = "\t";
+                } else {
+                    return;
+                }
+
+                let arr = this.columnsDesc.split(split);
                 for (let i = 0; i < arr.length; i++) {
                     this.tableColumns.push({
-                        columnDesc:arr[i],
-                        columnType:'string'
+                        columnDesc: arr[i],
+                        columnName: arr[i],
+                        columnType: 'string'
                     });
                 }
             },

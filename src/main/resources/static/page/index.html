@@ -18,7 +18,7 @@
 <body>
 <div id="app" style="padding-right: 10px">
     <el-container>
-        <el-aside style="width: 200px;">
+        <el-aside style="width: 150px;">
             <el-menu @select="open">
                 <el-submenu v-for="menu in menus" :index="menu.index">
                     <template slot="title"><i :class="menu.icon"></i>{{menu.name}}</template>

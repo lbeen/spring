@@ -1,14 +1,5 @@
 package com.lbeen.spring.sys.bean;
 
-/**
- * CREATE TABLE `t_table` (
- *   `id` varchar(32) NOT NULL,
- *   `dbId` varchar(32) DEFAULT NULL,
- *   `tableName` varchar(20) DEFAULT NULL,
- *   `tableDesc` varchar(20) DEFAULT NULL,
- *   PRIMARY KEY (`id`)
- * ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
- */
 public class Table {
     private String id;
     private String dbId;

@@ -17,6 +17,7 @@ import java.io.LineNumberReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
@@ -65,20 +66,14 @@ public class DataImporter {
                         total = reader.getLineNumber();
                     }
                     try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
-                        String line;
+                        String line = br.readLine();
+                        if (line == null) {
+                            return;
+                        }
+                        addToQueue(removeUtf8Prefix(line), queue);
+
                         while ((line = br.readLine()) != null) {
-                            String[] data = line.split(split);
-
-                            Document document = new Document();
-                            for (BiConsumer<Document, String[]> valuePut : valuePuts) {
-                                valuePut.accept(document, data);
-                            }
-                            if (document.isEmpty()) {
-                                continue;
-                            }
-                            document.put("_id", CommonUtil.uuid());
-
-                            queue.offer(document);
+                            addToQueue(line, queue);
                         }
                     }
                 };
@@ -93,23 +88,51 @@ public class DataImporter {
                     public void consume(Document document) {
                         inserts.add(document);
                         if (inserts.size() == 5000) {
-                            MongoUtil.insertList(tableName, inserts);
-                            imported.addAndGet(5000);
-                            inserts.clear();
+                            insertData(inserts);
                         }
                     }
 
                     @Override
                     public void finish() {
                         if (!inserts.isEmpty()) {
-                            MongoUtil.insertList(tableName, inserts);
-                            imported.addAndGet(inserts.size());
+                            insertData(inserts);
                         }
                     }
                 };
             }
         };
 
-        return AssemblyLine.singleProducer(workerFactory, 2);
+        return AssemblyLine.singleProducer(workerFactory, 5);
+    }
+
+    private String removeUtf8Prefix(String line) {
+        byte[] bytes = line.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < 3 || bytes[0] != -17 || bytes[1] != -69 || bytes[2] != -65) {
+            return line;
+        }
+        byte[] dest = new byte[bytes.length - 3];
+        System.arraycopy(bytes, 3, dest, 0, dest.length);
+        return new String(dest, StandardCharsets.UTF_8);
+    }
+
+    private void addToQueue(String line, LinkedBlockingQueue<Document> queue) throws Exception {
+        String[] data = line.split(split);
+
+        Document document = new Document();
+        for (BiConsumer<Document, String[]> valuePut : valuePuts) {
+            valuePut.accept(document, data);
+        }
+        if (document.isEmpty()) {
+            return;
+        }
+        document.put("_id", CommonUtil.uuid());
+
+        queue.put(document);
+    }
+
+    private void insertData(List<Document> inserts) {
+        MongoUtil.insertList(tableName, inserts);
+        imported.addAndGet(inserts.size());
+        inserts.clear();
     }
 }

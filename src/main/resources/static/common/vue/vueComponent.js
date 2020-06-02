@@ -36,7 +36,8 @@ Vue.component('pageTable', {
             myPageSize: 10,
             currentPage: 1,
             total: 0,
-            tableData: []
+            tableData: [],
+            tableLoading:false
         }
     },
     created: function () {
@@ -53,18 +54,19 @@ Vue.component('pageTable', {
             if (!param) {
                 param = this.paramFun();
             }
-            param.skip = this.pageSize * (this.currentPage - 1);
-            param.limit = this.pageSize;
+            param.skip = this.myPageSize * (this.currentPage - 1);
+            param.limit = this.myPageSize;
 
             let self = this;
+            this.tableLoading = true;
+            this.total = 0;
+            this.tableData = [];
             this.httpGet(this.url, param, function (data) {
                 if (data) {
                     self.total = data.total;
                     self.tableData = data.list;
-                } else {
-                    self.total = [];
-                    self.tableData = [];
                 }
+                self.tableLoading = false;
             });
         },
         handleSizeChange: function (pageSize) {
@@ -82,7 +84,7 @@ Vue.component('pageTable', {
         '       <slot name="search" :loadData="loadData"></slot>' +
         '   </el-row>' +
         '   <el-row>' +
-        '       <el-table :data="tableData" border :max-height="tableMaxHeight">' +
+        '       <el-table :data="tableData" border :max-height="tableMaxHeight" v-loading="tableLoading" stripe>' +
         '           <slot name="table"></slot>' +
         '       </el-table>' +
         '   </el-row>' +
@@ -91,7 +93,7 @@ Vue.component('pageTable', {
         '               style="text-align: right"' +
         '               @size-change="handleSizeChange"' +
         '               @current-change="handleCurrentChange"' +
-        '               :current-page="myPageSize"' +
+        '               :current-page="currentPage"' +
         '               :page-sizes="pageSizes"' +
         '               :page-size="myPageSize"' +
         '               layout="total, sizes, prev, pager, next"' +

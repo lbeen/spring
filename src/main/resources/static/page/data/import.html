@@ -36,7 +36,6 @@
             <el-form-item>
                 <el-button type="primary" @click="preview" size="small">预览</el-button>
                 <el-button type="success" @click="saveData" size="small">保存</el-button>
-<!--                <el-button type="success" @click="showProgress = true" size="small">进度条</el-button>-->
             </el-form-item>
         </el-form>
     </el-row>
@@ -90,16 +89,19 @@
             tableId: '',
             fileName: '',
             tmpFileName: '',
-            split: '',
+            split: ',',
             previewCount: 50,
 
             tableOptions: [],
             splitOptions: [{
                 label: '英文逗号',
-                value: 'comma'
+                value: ','
             }, {
                 label: '制表符',
-                value: 'tab'
+                value: '\t'
+            }, {
+                label: '中文逗号',
+                value: '，'
             }],
 
             maxLineSize: 0,
@@ -117,11 +119,9 @@
         },
         created: function () {
             this.getTables();
-        }
-        ,
+        },
         methods: {
             beforeClose: function () {
-
             },
             getTables: function () {
                 this.httpGet('table/getPage', {
@@ -138,12 +138,10 @@
                         }
                     }
                 });
-            }
-            ,
+            },
             submitUpload() {
                 this.$refs.upload.submit();
-            }
-            ,
+            },
             handleUploadSuccess: function (res) {
                 if (res.code !== 0) {
                     this.$message.error(res.msg);
@@ -152,8 +150,7 @@
                 this.fileName = res.data.fileName;
                 this.tmpFileName = res.data.tmpFileName;
                 this.isShowUpload = false;
-            }
-            ,
+            },
             preview: function () {
                 if (!this.tmpFileName) {
                     this.$message.error('请上传文件');
@@ -256,11 +253,10 @@
                 let percent = imported / total;
                 this.percentage = Number((percent * 100).toFixed(2));
                 let remaining = this.getTimeShow(cost / percent - cost);
-                console.log(startTime, cost, remaining, this.percentage);
                 this.importInfo = '总数：' + total + '，已导入: ' + imported + '，耗时：' + this.getTimeShow(cost) + '，预计还需' + remaining;
             },
             getTimeShow: function (millis) {
-                let second = Math.round(millis / 100);
+                let second = Math.round(millis / 1000);
                 let minutes = Math.floor(second / 60);
                 second = second - minutes * 60;
 

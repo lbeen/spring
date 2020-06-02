@@ -1,13 +1,18 @@
 package com.lbeen.spring.data.web;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.lbeen.spring.common.bean.Page;
 import com.lbeen.spring.common.bean.Result;
 import com.lbeen.spring.common.util.CommonUtil;
+import com.lbeen.spring.common.util.MongoUtil;
 import com.lbeen.spring.data.util.DataImporter;
 import com.lbeen.spring.data.util.DataUtil;
 import com.lbeen.spring.sys.bean.Table;
 import com.lbeen.spring.sys.bean.TableColumn;
 import com.lbeen.spring.sys.service.TableService;
+import com.mongodb.BasicDBObject;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
@@ -62,7 +67,6 @@ public class DataController {
         if (previewCount == null) {
             previewCount = 50;
         }
-        split = getSplit(split);
 
         try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(uploadTmpPath + tmpFileName), StandardCharsets.UTF_8))) {
             List<TableColumn> columns = tableService.selectColumnsByTableId(tableId);
@@ -89,21 +93,11 @@ public class DataController {
         }
     }
 
-    private String getSplit(String split) {
-        if ("comma".equals(split)) {
-            return ",";
-        }
-        if ("制表符".equals(split)) {
-            return "\t";
-        }
-        return ",";
-    }
-
     @RequestMapping("saveData")
     public Object saveData(@RequestBody JSONObject json) {
         String tmpFileName = json.getString("tmpFileName");
         String tableId = json.getString("tableId");
-        String split = getSplit(json.getString("split"));
+        String split = json.getString("split");
         @SuppressWarnings("unchecked")
         Map<String, Integer> heads = (Map<String, Integer>) json.get("heads");
 
@@ -139,5 +133,42 @@ public class DataController {
             CACHE.remove(uuid);
         }
         return Result.success(status);
+    }
+
+    @RequestMapping("getData")
+    public Page getData(String table, Integer skip, Integer limit, String conditions) {
+        if (StringUtils.isBlank(table)) {
+            return new Page(skip, limit).empty();
+        }
+
+        BasicDBObject condition = new BasicDBObject();
+        JSONArray jsonArray = JSON.parseArray(conditions);
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JSONObject json = jsonArray.getJSONObject(i);
+            String columnName = json.getString("columnName");
+            String columnType = json.getString("columnType");
+            if (StringUtils.isBlank(columnName) || StringUtils.isBlank(columnType)) {
+                continue;
+            }
+            Object value;
+            switch (columnType) {
+                case "int":
+                    value = json.getInteger("columnValue");
+                    break;
+                case "long":
+                    value = json.getLong("columnValue");
+                    break;
+                case "double":
+                    value = json.getDouble("columnValue");
+                    break;
+                default:
+                    value = json.get("columnValue");
+            }
+            if (value != null) {
+                condition.append(columnName, value);
+            }
+        }
+        return MongoUtil.findPage(table, condition, skip, limit);
+
     }
 }

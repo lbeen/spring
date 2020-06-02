@@ -1,6 +1,7 @@
 package com.lbeen.spring.common.util;
 
 import com.lbeen.spring.common.bean.MyMongoClient;
+import com.lbeen.spring.common.bean.Page;
 import com.lbeen.spring.sys.bean.Database;
 import com.lbeen.spring.sys.bean.Table;
 import com.lbeen.spring.sys.service.DatabaseService;
@@ -72,11 +73,11 @@ public class MongoUtil {
     }
 
     public static Long count(String collectionName, Bson filter) {
-        return  getMongoCollection(collectionName).countDocuments(filter);
+        return getMongoCollection(collectionName).countDocuments(filter);
     }
 
     public static Document findOne(String collectionName, Bson filter) {
-        FindIterable<Document> iterable =  getMongoCollection(collectionName).find(filter);
+        FindIterable<Document> iterable = getMongoCollection(collectionName).find(filter);
         for (Document document : iterable) {
             return document;
         }
@@ -87,10 +88,21 @@ public class MongoUtil {
         return find(collectionName, filter, null, null);
     }
 
-    public static List<Document> find(String collectionName, Bson filter, Integer skip, Integer limit) {
+    public static Page findPage(String collectionName, Bson filter, Integer skip, Integer limit) {
+        Page page = new Page(skip, limit);
+
+        long total = count(collectionName, filter);
+        page.setTotal(total);
+        if (total == 0) {
+            return page.empty();
+        }
+        return page.setTotal(total).setList(find(collectionName, filter, page.getSkip(), page.getLimit()));
+    }
+
+    private static List<Document> find(String collectionName, Bson filter, Integer skip, Integer limit) {
         ArrayList<Document> result = new ArrayList<>();
 
-        FindIterable<Document> iterable =  getMongoCollection(collectionName).find(filter);
+        FindIterable<Document> iterable = getMongoCollection(collectionName).find(filter);
         if (skip != null) {
             iterable.skip(skip);
         }
