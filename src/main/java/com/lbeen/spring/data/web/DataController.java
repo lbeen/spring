@@ -41,7 +41,7 @@ import java.util.function.BiConsumer;
 @RequestMapping("/data/")
 public class DataController {
 //    private final String uploadTmpPath = "E:/uploadTmpPath/";
-    private final String uploadTmpPath = "/usr/local/spring/upload";
+    private final String uploadTmpPath = "/usr/local/spring/upload/";
 
     private final static Map<String, DataImporter> CACHE = new HashMap<>();
 
